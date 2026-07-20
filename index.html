@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opname AFC — DC Almaz Bekasi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink:#25231f;
+    --paper:#f6f2ea;
+    --paper-raised:#ffffff;
+    --amber:#c17a2e;
+    --amber-deep:#96591b;
+    --slate:#5c574d;
+    --line:#e2dbcb;
+    --ok:#3f7d58;
+    --ok-bg:#e7f0e9;
+    --bad:#b23a2e;
+    --bad-bg:#f7e6e3;
+    --pending:#9a8f72;
+    --pending-bg:#efe9d8;
+    --radius:10px;
+    --shadow: 0 1px 2px rgba(37,35,31,0.06), 0 4px 14px rgba(37,35,31,0.05);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+  }
+  ::selection{background:var(--amber); color:#fff;}
+
+  /* ---- Top bar ---- */
+  .topbar{
+    position:sticky; top:0; z-index:30;
+    background:var(--ink);
+    color:var(--paper);
+    padding:14px 18px;
+    display:flex; align-items:center; gap:14px;
+    flex-wrap:wrap;
+  }
+  .brand{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:18px;
+    letter-spacing:0.2px;
+    display:flex; align-items:center; gap:8px;
+    white-space:nowrap;
+  }
+  .brand .mark{
+    width:10px;height:10px;border-radius:3px;
+    background:var(--amber);
+    transform:rotate(45deg);
+    flex-shrink:0;
+  }
+  .sync-dot{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; color:#c9c3b3;
+    margin-left:auto;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .sync-dot .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:#6d6a5f;
+  }
+  .sync-dot.on .dot{ background:#7cbf8f; box-shadow:0 0 0 3px rgba(124,191,143,0.2);}
+  .sync-dot.off .dot{ background:var(--bad); }
+
+  .session-bar{
+    background:var(--paper-raised);
+    border-bottom:1px solid var(--line);
+    padding:12px 18px;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  select, input[type=text]{
+    font-family:'Inter',sans-serif;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:13px;
+    background:#fff;
+    color:var(--ink);
+  }
+  button{
+    font-family:'Inter',sans-serif;
+    border:none; border-radius:8px;
+    padding:8px 14px;
+    font-size:13px; font-weight:600;
+    cursor:pointer;
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  button:active{ transform:scale(0.97); }
+  .btn-amber{ background:var(--amber); color:#fff; }
+  .btn-amber:hover{ background:var(--amber-deep); }
+  .btn-ghost{ background:transparent; color:var(--slate); border:1px solid var(--line); }
+  .btn-ghost:hover{ background:#fff; }
+  .session-label{ font-size:12px; color:var(--slate); }
+
+  /* ---- Tabs lantai ---- */
+  .tabs{
+    display:flex; gap:6px; padding:14px 18px 0;
+  }
+  .tab{
+    padding:9px 18px;
+    border-radius:9px 9px 0 0;
+    background:transparent;
+    color:var(--slate);
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    border:1px solid transparent;
+  }
+  .tab.active{
+    background:var(--paper-raised);
+    color:var(--ink);
+    border:1px solid var(--line);
+    border-bottom:1px solid var(--paper-raised);
+    margin-bottom:-1px;
+  }
+
+  .content{
+    max-width:1000px;
+    margin:0 auto;
+    padding:0 18px 100px;
+  }
+  .zone-list{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:0 var(--radius) var(--radius) var(--radius);
+    padding:6px;
+    margin-top:0;
+  }
+
+  .zone{
+    border-bottom:1px solid var(--line);
+  }
+  .zone:last-child{ border-bottom:none; }
+  .zone-head{
+    display:flex; align-items:center; gap:12px;
+    padding:14px 12px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .zone-head:hover{ background:#faf7f0; border-radius:8px; }
+  .zone-num{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--pending);
+    width:22px;
+  }
+  .zone-name{
+    font-weight:600;
+    font-size:14.5px;
+    flex:1;
+  }
+  .zone-progress{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--slate);
+    padding:3px 9px;
+    background:var(--paper);
+    border-radius:20px;
+    border:1px solid var(--line);
+  }
+  .zone-progress.done{ color:var(--ok); background:var(--ok-bg); border-color:transparent; }
+  .zone-caret{
+    color:var(--pending);
+    font-size:12px;
+    transition:transform .15s ease;
+  }
+  .zone.open .zone-caret{ transform:rotate(90deg); }
+
+  .zone-body{
+    display:none;
+    padding:0 12px 16px;
+  }
+  .zone.open .zone-body{ display:block; }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  thead th{
+    text-align:left;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--pending);
+    font-weight:600;
+    padding:6px 8px;
+    border-bottom:1px solid var(--line);
+  }
+  tbody td{
+    padding:8px;
+    border-bottom:1px solid #f0ebe0;
+    vertical-align:middle;
+  }
+  tbody tr:last-child td{ border-bottom:none; }
+  .item-name{ font-weight:500; }
+  .item-unit{ color:var(--pending); font-size:11.5px; }
+  .qty-input{
+    width:72px;
+    padding:6px 8px;
+    font-family:'IBM Plex Mono',monospace;
+    text-align:right;
+  }
+  .qty-input:focus{ outline:2px solid var(--amber); outline-offset:1px; }
+  .qty-display{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:600;
+    font-size:14px;
+    color:var(--ink);
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 12px;
+    display:inline-block;
+    min-width:50px;
+    text-align:center;
+  }
+  .satuan-cell{
+    text-align:left; width:90px; color:var(--slate);
+    font-family:'Inter',sans-serif;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 8px;
+    font-size:13px;
+    background:#fff;
+    cursor:pointer;
+  }
+  .satuan-cell:focus{ outline:2px solid var(--amber); outline-offset:1px; }
+  .barcode-cell{ display:flex; align-items:center; gap:6px; }
+  .barcode-cell .catatan-input[readonly]{
+    background:var(--paper); color:var(--pending); cursor:not-allowed;
+  }
+  .lock-btn{
+    background:transparent; border:none; cursor:pointer;
+    font-size:14px; padding:4px 6px; border-radius:6px; flex-shrink:0;
+  }
+  .lock-btn:hover{ background:var(--pending-bg); }
+  .selisih{
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:600;
+    font-size:12.5px;
+    padding:3px 8px;
+    border-radius:6px;
+    display:inline-block;
+    min-width:36px;
+    text-align:center;
+  }
+  .selisih.zero{ color:var(--ok); background:var(--ok-bg); }
+  .selisih.neg{ color:var(--bad); background:var(--bad-bg); }
+  .selisih.pos{ color:var(--amber-deep); background:#f7ebd9; }
+  .selisih.na{ color:var(--pending); background:var(--pending-bg); }
+  .catatan-input{ width:100%; min-width:110px; font-size:12px; padding:6px 8px; }
+  .del-item{
+    background:transparent; border:none; color:var(--pending);
+    cursor:pointer; font-size:15px; padding:2px 6px;
+  }
+  .del-item:hover{ color:var(--bad); }
+
+  .add-item-row{
+    display:flex; gap:8px; padding:10px 8px 4px; flex-wrap:wrap;
+  }
+  .add-item-row input{ flex:1; min-width:120px; }
+  .add-item-row .satuan-input{ width:80px; flex:none; }
+
+  .empty-zone{
+    padding:16px 8px; color:var(--pending); font-size:13px; font-style:italic;
+  }
+
+  /* ---- Footer summary ---- */
+  .footer-bar{
+    position:fixed; bottom:0; left:0; right:0;
+    background:var(--ink); color:var(--paper);
+    padding:12px 18px;
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+    z-index:20;
+    box-shadow:0 -4px 16px rgba(0,0,0,0.15);
+  }
+  .footer-stat{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+  }
+  .footer-stat b{ font-size:15px; display:block; font-family:'Space Grotesk',sans-serif; }
+  .footer-bar .btn-amber{ margin-left:auto; }
+
+  .no-session{
+    max-width:1000px; margin:60px auto; text-align:center;
+    color:var(--slate); padding:0 20px;
+  }
+  .no-session h2{ font-family:'Space Grotesk',sans-serif; color:var(--ink); }
+
+  @media (max-width: 600px){
+    .content{ padding:0 8px 110px; }
+    .qty-input{ width:58px; }
+    /* semua kolom tetap tampil di mobile: Qty Fisik, Satuan, Catatan */
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="mark"></span>Opname AFC · DC Almaz Bekasi</div>
+  <div class="sync-dot off" id="syncDot"><span class="dot"></span><span id="syncText">menghubungkan...</span></div>
+</div>
+
+<div class="session-bar">
+  <span class="session-label">Sesi:</span>
+  <select id="sessionSelect"></select>
+  <button class="btn-amber" id="newSessionBtn">+ Sesi baru</button>
+  <button class="btn-ghost" id="finishSessionBtn">Tandai selesai</button>
+  <span class="session-label" id="updaterLabel" style="margin-left:auto;"></span>
+</div>
+
+<div id="mainArea">
+  <div class="no-session" id="noSessionMsg" style="display:none;">
+    <h2>Belum ada sesi opname</h2>
+    <p>Klik <b>+ Sesi baru</b> di atas buat mulai opname pertama.</p>
+  </div>
+  <div id="opnameArea">
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-lantai="1">Lantai 1</div>
+      <div class="tab" data-lantai="2">Lantai 2</div>
+    </div>
+    <div class="content">
+      <div class="zone-list" id="zoneList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-bar">
+  <div class="footer-stat">Item dicek<b id="statChecked">0/0</b></div>
+  <button class="btn-amber" id="exportBtn">⤓ Export Excel</button>
+</div>
+
+<script>
+// =========================================================
+// KONFIGURASI — isi dengan Supabase project lo
+// =========================================================
+const SUPABASE_URL = "https://qoonjeimsrzztlfyembp.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvb25qZWltc3J6enRsZnllbWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNTg2MTgsImV4cCI6MjA5OTczNDYxOH0.vgqaUJbDOu0hN7gp3f9SozHsDymZR-0TKTijl8q_2ZI";
+const NAMA_PENGGUNA = localStorage.getItem('opname_nama') || prompt("Nama lo siapa? (buat catatan siapa yang input)") || "Anonim";
+localStorage.setItem('opname_nama', NAMA_PENGGUNA);
+
+// PIN buat buka kunci edit Barcode. Ganti sesuka hati.
+const ADMIN_PIN = '1234';
+let barcodeUnlocked = false;
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let state = {
+  lantai: 1,
+  zones: [],
+  items: [],
+  sessions: [],
+  activeSessionId: null,
+  entries: {}, // item_id -> entry
+  openZones: new Set(),
+  healingInProgress: false,
+  masterProdukMap: new Map(),
+};
+
+const el = id => document.getElementById(id);
+
+function setSync(ok, text){
+  const dot = el('syncDot');
+  dot.className = 'sync-dot ' + (ok ? 'on' : 'off');
+  el('syncText').textContent = text;
+}
+
+async function loadZonesAndItems(){
+  const { data: zones } = await sb.from('zones').select('*').order('lantai').order('urutan');
+  const { data: items } = await sb.from('items').select('*');
+  state.zones = zones || [];
+  state.items = items || [];
+}
+
+async function loadMasterProduk(){
+  const { data, error } = await sb.from('master_produk').select('*');
+  state.masterProdukMap = new Map();
+  if(!error && data){
+    data.forEach(m => {
+      state.masterProdukMap.set(normalisasiNama(m.nama), m);
+    });
+  }
+}
+
+async function ensureDefaultItems(){
+  const zonesNeeding = state.zones.filter(z => !state.items.some(i => i.zone_id === z.id));
+  if(!zonesNeeding.length) return;
+  const inserts = zonesNeeding.map(z => ({ zone_id: z.id, nama: z.nama, satuan: 'pcs' }));
+  const { data, error } = await sb.from('items').insert(inserts).select();
+  if(!error && data){
+    state.items.push(...data);
+  }
+}
+
+async function loadSessions(){
+  const { data } = await sb.from('opname_sessions').select('*').order('created_at', { ascending:false });
+  state.sessions = data || [];
+  const select = el('sessionSelect');
+  select.innerHTML = state.sessions.map(s =>
+    `<option value="${s.id}">${s.nama} · ${s.tanggal} ${s.status==='selesai'?'✓':''}</option>`
+  ).join('');
+  if(state.sessions.length && !state.activeSessionId){
+    state.activeSessionId = state.sessions[0].id;
+  }
+  if(state.activeSessionId) select.value = state.activeSessionId;
+}
+
+async function loadEntries(){
+  if(!state.activeSessionId) return;
+  const { data } = await sb.from('opname_entries').select('*').eq('session_id', state.activeSessionId);
+  state.entries = {};
+  (data||[]).forEach(e => state.entries[e.item_id] = e);
+}
+
+function itemsForZone(zoneId){
+  return state.items.filter(i => i.zone_id === zoneId);
+}
+
+function selisihClass(sistem, fisik){
+  if(fisik === null || fisik === undefined || fisik === '') return 'na';
+  const d = Number(fisik) - Number(sistem||0);
+  if(d === 0) return 'zero';
+  return d < 0 ? 'neg' : 'pos';
+}
+function selisihText(sistem, fisik){
+  if(fisik === null || fisik === undefined || fisik === '') return '—';
+  const d = Number(fisik) - Number(sistem||0);
+  return (d > 0 ? '+' : '') + d;
+}
+
+function render(){
+  if(!state.activeSessionId){
+    el('noSessionMsg').style.display = 'block';
+    el('opnameArea').style.display = 'none';
+    return;
+  }
+  el('noSessionMsg').style.display = 'none';
+  el('opnameArea').style.display = 'block';
+
+  const zones = state.zones.filter(z => z.lantai === state.lantai);
+  const container = el('zoneList');
+
+  if(!zones.length){
+    container.innerHTML = `<div class="empty-zone">Belum ada zona di lantai ini.</div>`;
+    return;
+  }
+
+  const missingItemZones = zones.filter(z => itemsForZone(z.id).length === 0);
+  if(missingItemZones.length && !state.healingInProgress){
+    state.healingInProgress = true;
+    ensureDefaultItems().then(() => {
+      state.healingInProgress = false;
+      render();
+    });
+  }
+
+  container.innerHTML = zones.map((z, idx) => {
+    const items = itemsForZone(z.id);
+    const checked = items.filter(i => {
+      const e = state.entries[i.id];
+      return e && e.qty_fisik !== null && e.qty_fisik !== undefined;
+    }).length;
+    const isOpen = state.openZones.has(z.id);
+    const progClass = items.length && checked === items.length ? 'done' : '';
+
+    const satuanOptions = ['pcs','pack','box','karton','sak','dus','botol','kg','gr','lt','ml'];
+    const rows = items.length ? items.map(i => {
+      const e = state.entries[i.id] || {};
+      const fisikVal = (e.qty_fisik === undefined || e.qty_fisik === null) ? '' : e.qty_fisik;
+      const currentSatuan = i.satuan || 'pcs';
+      const satuanOpts = satuanOptions.includes(currentSatuan) ? satuanOptions : [currentSatuan, ...satuanOptions];
+      return `
+        <tr>
+          <td><span class="qty-display">${fisikVal === '' ? '—' : fisikVal}</span></td>
+          <td><select class="satuan-cell" data-role="satuan" data-item="${i.id}">
+            ${satuanOpts.map(u => `<option value="${u}" ${u===currentSatuan?'selected':''}>${u}</option>`).join('')}
+          </select></td>
+          <td><input class="catatan-input" type="text" placeholder="..." value="${e.catatan||''}" data-role="catatan" data-item="${i.id}"></td>
+          <td>
+            <div class="barcode-cell">
+              <input class="catatan-input" type="text" placeholder="scan/isi barcode"
+                value="${i.barcode||''}" data-role="barcode" data-item="${i.id}"
+                ${barcodeUnlocked ? '' : 'readonly'}>
+              ${barcodeUnlocked ? '' : '<button class="lock-btn" data-unlock-barcode title="Buka kunci edit barcode">🔒</button>'}
+            </div>
+          </td>
+        </tr>`;
+    }).join('') : `<tr><td colspan="4" class="empty-zone">Memuat...</td></tr>`;
+
+    return `
+      <div class="zone ${isOpen?'open':''}" data-zone="${z.id}">
+        <div class="zone-head" data-toggle="${z.id}">
+          <span class="zone-num">${String(idx+1).padStart(2,'0')}</span>
+          <span class="zone-name">${z.nama}</span>
+          <span class="zone-progress ${progClass}">${checked}/${items.length}</span>
+          <span class="zone-caret">▶</span>
+        </div>
+        <div class="zone-body">
+          <table>
+            <thead><tr>
+              <th>Qty Fisik</th><th>Satuan</th><th>Catatan</th><th>Barcode</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+
+  bindZoneEvents();
+  renderFooter();
+}
+
+function renderFooter(){
+  const zones = state.zones.filter(z => z.lantai === state.lantai);
+  let total = 0, checked = 0;
+  zones.forEach(z => {
+    itemsForZone(z.id).forEach(i => {
+      total++;
+      const e = state.entries[i.id];
+      if(e && e.qty_fisik !== null && e.qty_fisik !== undefined && e.qty_fisik !== ''){
+        checked++;
+      }
+    });
+  });
+  el('statChecked').textContent = `${checked}/${total}`;
+}
+
+function bindZoneEvents(){
+  document.querySelectorAll('[data-toggle]').forEach(node => {
+    node.onclick = () => {
+      const id = node.getAttribute('data-toggle');
+      if(state.openZones.has(id)) state.openZones.delete(id);
+      else state.openZones.add(id);
+      render();
+    };
+  });
+
+  document.querySelectorAll('[data-unlock-barcode]').forEach(btn => {
+    btn.onclick = () => {
+      const pin = prompt('Masukin PIN buat edit barcode:');
+      if(pin === null) return;
+      if(pin === ADMIN_PIN){
+        barcodeUnlocked = true;
+        render();
+      } else {
+        alert('PIN salah.');
+      }
+    };
+  });
+
+  document.querySelectorAll('input[data-item], select[data-item]').forEach(inp => {
+    inp.onchange = async () => {
+      const itemId = inp.getAttribute('data-item');
+      const role = inp.getAttribute('data-role');
+      if(role === 'satuan'){
+        await updateItemSatuan(itemId, inp.value);
+      } else if(role === 'barcode'){
+        await updateItemBarcode(itemId, inp.value);
+      } else {
+        await upsertEntry(itemId, role, inp.value);
+      }
+    };
+  });
+}
+
+async function updateItemSatuan(itemId, value){
+  const { data, error } = await sb.from('items').update({ satuan: value }).eq('id', itemId).select();
+  if(!error && data){
+    const idx = state.items.findIndex(i => i.id === itemId);
+    if(idx >= 0) state.items[idx] = data[0];
+    render();
+  }
+}
+
+async function updateItemBarcode(itemId, value){
+  const { data, error } = await sb.from('items').update({ barcode: value || null }).eq('id', itemId).select();
+  if(!error && data){
+    const idx = state.items.findIndex(i => i.id === itemId);
+    if(idx >= 0) state.items[idx] = data[0];
+  } else if(error){
+    alert('Gagal simpan barcode: ' + error.message);
+  }
+}
+
+async function upsertEntry(itemId, role, value){
+  if(!state.activeSessionId){ alert('Belum ada sesi opname aktif. Bikin sesi dulu.'); return; }
+  const existing = state.entries[itemId] || { item_id: itemId, session_id: state.activeSessionId, qty_sistem: 0 };
+  const payload = { ...existing };
+  if(role === 'sistem') payload.qty_sistem = value === '' ? 0 : Number(value);
+  if(role === 'fisik') payload.qty_fisik = value === '' ? null : Number(value);
+  if(role === 'catatan') payload.catatan = value;
+  payload.updated_by = NAMA_PENGGUNA;
+  payload.updated_at = new Date().toISOString();
+  delete payload.id;
+
+  const { data, error } = await sb.from('opname_entries')
+    .upsert(payload, { onConflict: 'session_id,item_id' })
+    .select();
+  if(!error && data){
+    state.entries[itemId] = data[0];
+    render();
+  }
+}
+
+// ---- Sesi ----
+el('newSessionBtn').onclick = async () => {
+  const nama = prompt('Nama sesi opname (misal: Opname Juli 2026)');
+  if(!nama) return;
+  const { data, error } = await sb.from('opname_sessions').insert({ nama }).select();
+  if(!error && data){
+    if(!state.zones.length){
+      await loadZonesAndItems();
+      await ensureDefaultItems();
+    }
+    await loadSessions();
+    state.activeSessionId = data[0].id;
+    el('sessionSelect').value = data[0].id;
+    await loadEntries();
+    render();
+  } else if(error){
+    alert('Gagal bikin sesi: ' + error.message);
+  }
+};
+
+el('finishSessionBtn').onclick = async () => {
+  if(!state.activeSessionId) return;
+  if(!confirm('Tandai sesi ini sebagai selesai?')) return;
+  await sb.from('opname_sessions').update({ status:'selesai' }).eq('id', state.activeSessionId);
+  await loadSessions();
+};
+
+el('sessionSelect').onchange = async (e) => {
+  state.activeSessionId = e.target.value;
+  await loadEntries();
+  render();
+};
+
+// ---- Tabs lantai ----
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    state.lantai = Number(tab.getAttribute('data-lantai'));
+    render();
+  };
+});
+
+// ---- Export Excel ----
+function normalisasiNama(s){
+  return (s||'').toString().trim().toLowerCase().replace(/\s+/g,' ');
+}
+
+function cariMaster(namaItem){
+  const key = normalisasiNama(namaItem);
+  return state.masterProdukMap.get(key) || null;
+}
+
+el('exportBtn').onclick = () => {
+  const header = ['No','Product Name','Product Code','Category','Sub Category','Unit','Opname Qty','Opname Value'];
+  const aoa = [['Stock Opname Template'], [], header];
+
+  let no = 1;
+  state.zones.forEach(z => {
+    itemsForZone(z.id).forEach(i => {
+      const e = state.entries[i.id] || {};
+      const master = cariMaster(i.nama);
+      aoa.push([
+        no++,
+        i.nama,
+        master?.kode_produk || '',
+        master?.kategori || '',
+        master?.sub_kategori || '',
+        master?.satuan || i.satuan || '',
+        (e.qty_fisik ?? '') ,
+        ''
+      ]);
+    });
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:5},{wch:32},{wch:14},{wch:12},{wch:16},{wch:8},{wch:12},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  const sessionName = state.sessions.find(s => s.id === state.activeSessionId)?.nama || 'opname';
+  XLSX.writeFile(wb, `${sessionName.replace(/\s+/g,'_')}.xlsx`);
+};
+
+// ---- Realtime subscribe ----
+function subscribeRealtime(){
+  sb.channel('opname-sync')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'opname_entries' }, payload => {
+      const row = payload.new || payload.old;
+      if(!row) return;
+      if(payload.eventType === 'DELETE'){
+        delete state.entries[row.item_id];
+      } else if(row.session_id === state.activeSessionId){
+        state.entries[row.item_id] = row;
+        if(row.updated_by && row.updated_by !== NAMA_PENGGUNA){
+          el('updaterLabel').textContent = `terakhir diupdate oleh ${row.updated_by}`;
+        }
+      }
+      render();
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, async () => {
+      const { data } = await sb.from('items').select('*');
+      state.items = data || [];
+      render();
+    })
+    .subscribe(status => {
+      setSync(status === 'SUBSCRIBED', status === 'SUBSCRIBED' ? 'tersambung' : 'terputus');
+    });
+}
+
+// ---- Init ----
+(async function init(){
+  try{
+    await loadZonesAndItems();
+    await ensureDefaultItems();
+    await loadMasterProduk();
+    await loadSessions();
+    if(!state.sessions.length){
+      render();
+      setSync(true, 'tersambung');
+      subscribeRealtime();
+      return;
+    }
+    await loadEntries();
+    render();
+    subscribeRealtime();
+  }catch(err){
+    console.error(err);
+    setSync(false, 'gagal konek — cek URL & anon key Supabase');
+  }
+})();
+</script>
+</body>
+</html>
