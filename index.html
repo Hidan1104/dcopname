@@ -154,11 +154,12 @@
 
   .dash-content{ max-width:1200px; margin:0 auto; padding:20px 18px 100px; }
   .produk-grid{
-    display:grid; grid-template-columns:repeat(auto-fill, minmax(170px,1fr)); gap:12px;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:12px;
   }
   .produk-card{
     background:var(--surface-1); border:1px solid var(--border); border-radius:12px;
-    padding:16px; display:flex; flex-direction:column; gap:10px; min-height:120px;
+    padding:16px; display:flex; flex-direction:column; gap:10px;
+    aspect-ratio:1/1; justify-content:space-between;
   }
   .produk-card .kategori-tag{
     font-size:10px; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;
@@ -465,6 +466,7 @@ function renderDashboard(){
     return;
   }
   hide('noSessionMsg');
+  show('produkGrid');
 
   const filtered = state.produkList.filter(p =>
     !state.searchQuery || p.nama.toLowerCase().includes(state.searchQuery)
