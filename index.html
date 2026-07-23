@@ -276,7 +276,9 @@
 // =========================================================
 const SUPABASE_URL = "https://qoonjeimsrzztlfyembp.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvb25qZWltc3J6enRsZnllbWJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNTg2MTgsImV4cCI6MjA5OTczNDYxOH0.vgqaUJbDOu0hN7gp3f9SozHsDymZR-0TKTijl8q_2ZI";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, storage: window.sessionStorage }
+});
 
 let state = {
   session: null,
@@ -289,6 +291,8 @@ let state = {
   entries: {},
   searchQuery: '',
   realtimeChannel: null,
+  mySessionToken: null,
+  sessionCheckChannel: null,
 };
 
 const el = id => document.getElementById(id);
@@ -327,8 +331,38 @@ async function loadProfile(){
   if(!error && data) state.profile = data;
 }
 
+// Klaim sesi: generate token baru, simpen ke profiles. Ini otomatis
+// "ngusir" device lain yang login pake akun yang sama.
+async function claimSession(){
+  state.mySessionToken = crypto.randomUUID();
+  await sb.from('profiles').update({ active_session_token: state.mySessionToken }).eq('id', state.session.user.id);
+}
+
+function watchSessionKick(){
+  state.sessionCheckChannel = sb.channel('session-kick-' + state.session.user.id)
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'profiles',
+      filter: `id=eq.${state.session.user.id}`
+    }, payload => {
+      if(payload.new.active_session_token !== state.mySessionToken){
+        alert('Akun ini baru aja login di device/browser lain, jadi sesi lo di sini otomatis ditutup.');
+        forceLogout();
+      }
+    })
+    .subscribe();
+}
+
+async function forceLogout(){
+  if(state.realtimeChannel) sb.removeChannel(state.realtimeChannel);
+  if(state.sessionCheckChannel) sb.removeChannel(state.sessionCheckChannel);
+  await sb.auth.signOut();
+  location.reload();
+}
+
 async function afterLogin(){
   await loadProfile();
+  await claimSession();
+  watchSessionKick();
   await loadDcs();
   hide('loginScreen');
   renderSelector();
@@ -336,11 +370,7 @@ async function afterLogin(){
 }
 
 [el('logoutBtn1'), el('logoutBtn2')].forEach(btn => {
-  btn.onclick = async () => {
-    if(state.realtimeChannel) sb.removeChannel(state.realtimeChannel);
-    await sb.auth.signOut();
-    location.reload();
-  };
+  btn.onclick = () => forceLogout();
 });
 
 // =========================================================
