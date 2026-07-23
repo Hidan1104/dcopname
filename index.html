@@ -175,6 +175,31 @@
   }
   .produk-card .qty.kosong{ color:var(--muted); font-weight:500; font-size:15px; }
   .produk-card .uom{ font-size:12px; color:var(--muted); }
+  .produk-card .scanned-by{
+    font-size:10.5px; color:var(--success); font-weight:600;
+  }
+
+  .zona-section{ margin-bottom:24px; }
+  .zona-heading{
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14.5px;
+    color:var(--ink); margin-bottom:10px; display:flex; align-items:baseline; gap:8px;
+  }
+  .zona-count{ font-size:12px; color:var(--muted); font-weight:400; font-family:'Inter',sans-serif; }
+
+  .btn-print{
+    padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600;
+    color:#fff; display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn-print.notready{ background:var(--danger); }
+  .btn-print.notready:hover{ background:#5f1717; }
+  .btn-print.ready{ background:var(--success); }
+  .btn-print.ready:hover{ background:#1c3a07; }
+
+  @media print{
+    .topbar, .session-bar, .footer-bar, .search-box{ display:none !important; }
+    body{ background:#fff; }
+    .zona-section{ break-inside:avoid; }
+  }
 
   .empty-state{ text-align:center; padding:60px 20px; color:var(--muted); }
 
@@ -256,7 +281,7 @@
     </div>
   </div>
   <div class="dash-content">
-    <div class="produk-grid" id="produkGrid"></div>
+    <div id="produkGrid"></div>
     <div class="empty-state hidden" id="noSessionMsg">
       <p>Belum ada sesi opname buat DC ini. Klik <b>+ Sesi baru</b> di atas.</p>
     </div>
@@ -265,6 +290,7 @@
     <div class="footer-stat">Produk dicek<b id="statChecked">0/0</b></div>
     <div class="export-group">
       <button class="btn-ghost" id="exportPdfBtn"><i class="ti ti-file-type-pdf"></i> PDF</button>
+      <button class="btn-print notready" id="printBtn"><i class="ti ti-printer"></i> Print</button>
       <button class="btn-amber" id="exportXlsxBtn">⤓ Excel</button>
     </div>
   </div>
@@ -361,6 +387,16 @@ async function forceLogout(){
 
 async function afterLogin(){
   await loadProfile();
+
+  if(state.profile?.role === 'scanner'){
+    await sb.auth.signOut();
+    el('loginError').textContent = 'Akun ini cuma bisa dipake login di app abwarehouse, bukan di web.';
+    el('loginError').classList.add('show');
+    state.session = null;
+    state.profile = null;
+    return;
+  }
+
   await claimSession();
   watchSessionKick();
   await loadDcs();
@@ -489,10 +525,11 @@ el('searchInput').addEventListener('input', (e) => {
 
 function renderDashboard(){
   if(!state.activeSessionId){
-    hide('produkGrid'); // keep grid element but empty
+    hide('produkGrid');
     el('produkGrid').innerHTML = '';
     show('noSessionMsg');
     el('statChecked').textContent = '0/0';
+    updatePrintBtnState();
     return;
   }
   hide('noSessionMsg');
@@ -505,17 +542,39 @@ function renderDashboard(){
   if(!filtered.length){
     el('produkGrid').innerHTML = `<div class="empty-state">Gak ada produk yang cocok.</div>`;
   } else {
-    el('produkGrid').innerHTML = filtered.map(p => {
-      const e = state.entries[p.id];
-      const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : null;
+    // Group per zona. Yang belum punya zona masuk "Tanpa Zona" di paling akhir.
+    const groups = {};
+    filtered.forEach(p => {
+      const key = (p.zona || '').trim().toUpperCase() || '_TANPA_ZONA';
+      if(!groups[key]) groups[key] = [];
+      groups[key].push(p);
+    });
+    const sortedKeys = Object.keys(groups).sort((a,b) => {
+      if(a === '_TANPA_ZONA') return 1;
+      if(b === '_TANPA_ZONA') return -1;
+      return a.localeCompare(b);
+    });
+
+    el('produkGrid').innerHTML = sortedKeys.map(key => {
+      const label = key === '_TANPA_ZONA' ? 'Tanpa Zona' : `Zona ${key}`;
+      const cards = groups[key].map(p => {
+        const e = state.entries[p.id];
+        const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : null;
+        return `
+          <div class="produk-card">
+            <span class="kategori-tag">${p.kategori || '-'}</span>
+            <div class="nama">${p.nama}</div>
+            <div class="qty-row">
+              <span class="qty ${qty === null ? 'kosong' : ''}">${qty === null ? '—' : qty}</span>
+              <span class="uom">${p.satuan || ''}</span>
+            </div>
+            ${e?.updated_by ? `<div class="scanned-by">✓ ${e.updated_by}</div>` : ''}
+          </div>`;
+      }).join('');
       return `
-        <div class="produk-card">
-          <span class="kategori-tag">${p.kategori || '-'}</span>
-          <div class="nama">${p.nama}</div>
-          <div class="qty-row">
-            <span class="qty ${qty === null ? 'kosong' : ''}">${qty === null ? '—' : qty}</span>
-            <span class="uom">${p.satuan || ''}</span>
-          </div>
+        <div class="zona-section">
+          <div class="zona-heading">${label} <span class="zona-count">${groups[key].length} produk</span></div>
+          <div class="produk-grid">${cards}</div>
         </div>`;
     }).join('');
   }
@@ -525,6 +584,19 @@ function renderDashboard(){
     return e && e.qty_fisik !== null && e.qty_fisik !== undefined;
   }).length;
   el('statChecked').textContent = `${checked}/${state.produkList.length}`;
+  updatePrintBtnState();
+}
+
+function updatePrintBtnState(){
+  const total = state.produkList.length;
+  const checked = state.produkList.filter(p => {
+    const e = state.entries[p.id];
+    return e && e.qty_fisik !== null && e.qty_fisik !== undefined;
+  }).length;
+  const btn = el('printBtn');
+  const ready = total > 0 && checked === total;
+  btn.classList.toggle('ready', ready);
+  btn.classList.toggle('notready', !ready);
 }
 
 function setSync(ok, text){
@@ -574,6 +646,10 @@ el('exportXlsxBtn').onclick = () => {
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   const sessionName = state.sessions.find(s => s.id === state.activeSessionId)?.nama || 'opname';
   XLSX.writeFile(wb, `${state.currentDc.nama.replace(/\s+/g,'_')}_${sessionName.replace(/\s+/g,'_')}.xlsx`);
+};
+
+el('printBtn').onclick = () => {
+  window.print();
 };
 
 el('exportPdfBtn').onclick = () => {
