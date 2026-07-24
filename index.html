@@ -344,7 +344,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // MODE TESTING: true = skip login, langsung masuk sebagai admin dummy.
 // Wajib diinjek migration-unlock-temp.sql biar data kebaca.
 // Balikin ke false lagi (+ jalanin migration-relock-rls.sql) kalau udah siap production.
-const SKIP_LOGIN = false;
+const SKIP_LOGIN = true;
 
 let state = {
   session: null,
@@ -686,6 +686,14 @@ function subscribeRealtime(){
       } else {
         state.entries[row.produk_id] = row;
       }
+      renderDashboard();
+    })
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public', table: 'produk',
+      filter: `dc_id=eq.${state.currentDc.id}`
+    }, payload => {
+      const idx = state.produkList.findIndex(p => p.id === payload.new.id);
+      if(idx >= 0) state.produkList[idx] = payload.new;
       renderDashboard();
     })
     .subscribe(status => {
