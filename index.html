@@ -344,7 +344,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // MODE TESTING: true = skip login, langsung masuk sebagai admin dummy.
 // Wajib diinjek migration-unlock-temp.sql biar data kebaca.
 // Balikin ke false lagi (+ jalanin migration-relock-rls.sql) kalau udah siap production.
-const SKIP_LOGIN = true;
+const SKIP_LOGIN = false;
 
 let state = {
   session: null,
