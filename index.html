@@ -579,7 +579,10 @@ el('sessionSelect').onchange = async (e) => {
 };
 
 el('newSessionBtn').onclick = async () => {
-  const nama = prompt('Nama sesi opname (misal: Opname Juli 2026)');
+  const namaUser = state.profile?.nama || state.session?.user?.email || 'Sesi';
+  const tanggal = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+  const namaOtomatis = `${namaUser} · ${tanggal}`;
+  const nama = prompt('Nama sesi opname:', namaOtomatis);
   if(!nama) return;
   const { data, error } = await sb.from('opname_sessions').insert({ nama, dc_id: state.currentDc.id }).select();
   if(!error && data){
