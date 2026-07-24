@@ -247,7 +247,7 @@
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-brand"><div class="mark"><i class="ti ti-building-warehouse"></i></div><span>Abuya Inventory</span></div>
-    <p class="sub">Login buat akses stock opname DC lo</p>
+    <p class="sub">Distribusi & Inventory</p>
     <div class="login-error" id="loginError"></div>
     <div class="field">
       <label>Email</label>
@@ -255,7 +255,7 @@
     </div>
     <div class="field">
       <label>Password</label>
-      <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+      <input type="password" id="loginPassword" placeholder="...." autocomplete="current-password">
     </div>
     <button class="btn-primary" id="loginBtn">Masuk</button>
   </div>
@@ -271,8 +271,8 @@
     </div>
   </div>
   <div class="wrap">
-    <h1>Pilih distribution center</h1>
-    <p class="hint" id="selectorHint">Pilih DC buat liat & export data stock opname</p>
+    <h1>Pilih Distribution Center</h1>
+    <p class="hint" id="selectorHint">Pilih DC untuk melihat Zona</p>
     <div class="dc-grid" id="dcGrid"></div>
   </div>
 </div>
@@ -288,8 +288,8 @@
     </div>
   </div>
   <div class="wrap">
-    <h1>Pilih zona</h1>
-    <p class="hint">Pilih zona buat liat & scan produk di area itu</p>
+    <h1>Pilih Zona</h1>
+    <p class="hint">Pilih Zona untuk melihat produk di area itu</p>
     <div class="zona-picker-grid" id="zonaGrid"></div>
   </div>
 </div>
@@ -300,13 +300,12 @@
     <button class="back-btn" id="backBtn"><i class="ti ti-arrow-left"></i> Zona lain</button>
     <div class="brand" id="dashDcName"></div>
     <div class="topbar-right">
-      <span class="sync-dot off" id="syncDot"><span class="dot"></span><span id="syncText">menghubungkan...</span></span>
+      <span class="sync-dot off" id="syncDot"><span class="dot"></span><span id="syncText">bentar</span></span>
       <button class="btn-ghost" id="logoutBtn2">Logout</button>
     </div>
   </div>
   <div class="session-bar">
     <select id="sessionSelect"></select>
-    <button class="btn-amber" id="newSessionBtn">+ Sesi baru</button>
     <div class="search-box">
       <i class="ti ti-search"></i>
       <input type="text" id="searchInput" placeholder="Cari produk...">
@@ -315,7 +314,7 @@
   <div class="dash-content">
     <div class="produk-grid" id="produkGrid"></div>
     <div class="empty-state hidden" id="noSessionMsg">
-      <p>Belum ada sesi opname buat DC ini. Klik <b>+ Sesi baru</b> di atas.</p>
+      <p>Memuat sesi opname...</p>
     </div>
     <div class="empty-state hidden" id="emptyZonaMsg">
       <p>Belum ada produk yang ke-assign ke zona ini.<br>Nanti otomatis keisi begitu produk discan lewat app abwarehouse.</p>
@@ -517,9 +516,37 @@ async function openDc(dcId){
 
   // Muat data produk & sesi di background, biar siap begitu zona dipilih
   await loadProduk(dcId);
+  await ensureActiveSession(dcId);
+  await loadEntries();
+}
+
+// Sesi otomatis ngikutin siapa yang lagi login di web -- gak perlu tombol
+// manual. Kalau belum ada sesi aktif buat DC ini, dibikinin otomatis.
+// Kalau udah ada, namanya di-update biar reflect siapa yang lagi mantau.
+async function ensureActiveSession(dcId){
+  const namaUser = state.profile?.nama || state.session?.user?.email || 'Admin';
+  const tanggal = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+  const namaSesi = `${namaUser} · ${tanggal}`;
+
   await loadSessions(dcId);
-  if(state.sessions.length){
-    await loadEntries();
+  const aktif = state.sessions.find(s => s.status === 'aktif');
+
+  if(aktif){
+    state.activeSessionId = aktif.id;
+    if(aktif.nama !== namaSesi){
+      await sb.from('opname_sessions').update({ nama: namaSesi }).eq('id', aktif.id);
+      aktif.nama = namaSesi;
+      const sel = el('sessionSelect');
+      sel.innerHTML = state.sessions.map(s => `<option value="${s.id}">${s.nama} · ${s.tanggal} ${s.status==='selesai'?'✓':''}</option>`).join('');
+      sel.value = state.activeSessionId;
+    }
+  } else {
+    const { data, error } = await sb.from('opname_sessions').insert({ nama: namaSesi, dc_id: dcId }).select();
+    if(!error && data){
+      await loadSessions(dcId);
+      state.activeSessionId = data[0].id;
+      el('sessionSelect').value = data[0].id;
+    }
   }
 }
 
@@ -560,8 +587,7 @@ async function loadSessions(dcId){
   const sel = el('sessionSelect');
   sel.innerHTML = state.sessions.map(s => `<option value="${s.id}">${s.nama} · ${s.tanggal} ${s.status==='selesai'?'✓':''}</option>`).join('');
   if(state.sessions.length){
-    state.activeSessionId = state.sessions[0].id;
-    sel.value = state.activeSessionId;
+    sel.value = state.activeSessionId || state.sessions[0].id;
   }
 }
 
@@ -576,24 +602,6 @@ el('sessionSelect').onchange = async (e) => {
   state.activeSessionId = e.target.value;
   await loadEntries();
   renderDashboard();
-};
-
-el('newSessionBtn').onclick = async () => {
-  const namaUser = state.profile?.nama || state.session?.user?.email || 'Sesi';
-  const tanggal = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
-  const namaOtomatis = `${namaUser} · ${tanggal}`;
-  const nama = prompt('Nama sesi opname:', namaOtomatis);
-  if(!nama) return;
-  const { data, error } = await sb.from('opname_sessions').insert({ nama, dc_id: state.currentDc.id }).select();
-  if(!error && data){
-    await loadSessions(state.currentDc.id);
-    state.activeSessionId = data[0].id;
-    el('sessionSelect').value = data[0].id;
-    await loadEntries();
-    renderDashboard();
-  } else if(error){
-    alert('Gagal bikin sesi: ' + error.message);
-  }
 };
 
 el('searchInput').addEventListener('input', (e) => {
