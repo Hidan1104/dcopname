@@ -134,19 +134,25 @@
   }
 
   /* ============ ZONA SELECTOR ============ */
-  #zonaScreen .wrap{ max-width:760px; margin:0 auto; padding:36px 18px 60px; }
+  #zonaScreen .wrap{ max-width:820px; margin:0 auto; padding:36px 18px 60px; }
   #zonaScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px; }
   #zonaScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0 0 22px; }
   .zona-picker-grid{
-    display:grid; grid-template-columns:repeat(auto-fill, minmax(72px,1fr)); gap:10px;
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:12px;
   }
-  .zona-tile{
-    background:var(--surface-1); border:1px solid var(--border); border-radius:12px;
-    aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
-    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:22px;
-    color:var(--primary); transition:border-color .15s ease, transform .1s ease;
+  .zona-card{
+    background:var(--surface-1); border:1px solid var(--border); border-radius:14px;
+    padding:16px 18px; display:flex; flex-direction:column; gap:8px; text-align:left;
+    transition:border-color .15s ease, transform .1s ease;
   }
-  .zona-tile:hover{ border-color:var(--primary); transform:translateY(-1px); background:var(--primary-soft); }
+  .zona-card:hover{ border-color:var(--primary); transform:translateY(-1px); background:var(--primary-soft); }
+  .zona-card .zona-name{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px; color:var(--primary);
+  }
+  .zona-card .zona-meta{
+    font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:3px;
+  }
+  .zona-card .zona-meta span{ display:flex; align-items:center; gap:5px; }
 
   /* ============ SESSION LIST ============ */
   #sessionListScreen .wrap{ max-width:820px; margin:0 auto; padding:36px 18px 60px; }
@@ -369,6 +375,7 @@
     <h1>Pilih Zona</h1>
     <p class="hint">Pilih Zona untuk melihat produk di area itu · <span class="session-name-label" id="zonaSessionLabel"></span></p>
     <div class="zona-picker-grid" id="zonaGrid"></div>
+    <div class="empty-state hidden" id="emptyZonaListMsg"><p>Belum ada zona yang terdaftar buat DC ini.</p></div>
   </div>
 </div>
 
@@ -461,6 +468,7 @@ let state = {
   currentDc: null,
   produkList: [],
   sessions: [],
+  zonesList: [],
   activeSessionId: null,
   entries: {},
   searchQuery: '',
@@ -624,7 +632,6 @@ el('logoutBtn4').onclick = () => forceLogout();
 // =========================================================
 // ZONA SELECTOR
 // =========================================================
-const ZONA_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 async function openDc(dcId){
   state.currentDc = state.dcs.find(d => d.id === dcId);
@@ -785,17 +792,35 @@ el('deleteModalConfirm').onclick = async () => {
   el('deleteModalConfirm').disabled = true;
   el('deleteModalConfirm').textContent = 'Menghapus...';
 
-  const { error: entriesErr } = await sb.from('opname_entries').delete().eq('session_id', id);
+  // .select() dipakai di sini bukan buat datanya, tapi biar kita bisa tau
+  // beneran ke-delete apa nggak. Supabase RLS itu KHUSUS: kalau policy DELETE
+  // nge-block, gak ada error yang balik -- row-nya cuma "difilter" diem-diem
+  // dan hasilnya keliatan "sukses" padahal 0 baris yang kehapus.
+  const { data: entriesData, error: entriesErr } = await sb
+    .from('opname_entries').delete().eq('session_id', id).select();
   if(entriesErr){
-    alert('Gagal hapus data opname di sesi ini: ' + entriesErr.message);
+    console.error('Delete opname_entries error:', entriesErr);
+    alert(`Gagal hapus data opname di sesi ini.\n\n${entriesErr.message}\ncode: ${entriesErr.code || '-'}`);
     el('deleteModalConfirm').disabled = false;
     el('deleteModalConfirm').textContent = 'Hapus';
     return;
   }
 
-  const { error } = await sb.from('opname_sessions').delete().eq('id', id);
+  const { data: sessionData, error } = await sb
+    .from('opname_sessions').delete().eq('id', id).select();
   if(error){
-    alert('Gagal hapus sesi: ' + error.message);
+    console.error('Delete opname_sessions error:', error);
+    alert(`Gagal hapus sesi.\n\n${error.message}\ncode: ${error.code || '-'}`);
+    el('deleteModalConfirm').disabled = false;
+    el('deleteModalConfirm').textContent = 'Hapus';
+    return;
+  }
+
+  if(!sessionData || sessionData.length === 0){
+    // Ini kasus RLS-nya diem-diem block: gak ada error, tapi juga gak ada
+    // baris yang kehapus.
+    console.warn('Delete returned 0 rows -- kemungkinan besar RLS policy DELETE di opname_sessions gak ngizinin role ini.');
+    alert('Sesi gak berhasil kehapus. Kemungkinan besar akun ini gak punya izin (RLS policy) buat hapus data di tabel opname_sessions. Cek policy DELETE di Supabase dashboard buat tabel opname_sessions & opname_entries.');
     el('deleteModalConfirm').disabled = false;
     el('deleteModalConfirm').textContent = 'Hapus';
     return;
@@ -831,26 +856,57 @@ async function openSession(id){
   await loadEntries();
   updateSessionNameLabels();
 
+  // Ambil dc_id dari sesi yang barusan diklik (opname_sessions.dc_id),
+  // dipakai buat filter tabel 'zones' biar cuma nampilin zona milik DC ini.
+  const session = state.sessions.find(x => x.id === id);
+  const dcId = session ? session.dc_id : state.currentDc.id;
+
   el('zonaDcName').innerHTML = `<div class="mark"><i class="ti ${state.currentDc.icon||'ti-box'}"></i></div>${state.currentDc.nama} · ${state.currentDc.sub||''}`;
   el('userChip2').innerHTML = el('userChip').innerHTML;
 
   hide('sessionListScreen');
+  await loadZones(dcId);
   renderZonaGrid();
   show('zonaScreen');
 }
 
+// Muat daftar zona dari tabel 'zones', difilter berdasarkan dc_id.
+async function loadZones(dcId){
+  const { data, error } = await sb.from('zones').select('*').eq('dc_id', dcId).order('nama');
+  if(error){
+    console.error('Gagal muat zones:', error);
+    state.zonesList = [];
+    return;
+  }
+  state.zonesList = data || [];
+}
+
 function renderZonaGrid(){
-  el('zonaGrid').innerHTML = ZONA_LETTERS.map(huruf => `
-    <button class="zona-tile" data-zona="${huruf}">${huruf}</button>
+  if(!state.zonesList.length){
+    el('zonaGrid').innerHTML = '';
+    show('emptyZonaListMsg');
+    return;
+  }
+  hide('emptyZonaListMsg');
+
+  el('zonaGrid').innerHTML = state.zonesList.map(z => `
+    <button class="zona-card" data-zona="${z.nama}">
+      <span class="zona-name">${z.nama}</span>
+      <span class="zona-meta">
+        <span><i class="ti ti-stairs-up"></i> Lantai ${z.lantai ?? '-'}</span>
+        <span><i class="ti ti-calendar"></i> ${formatTanggal(z.created_at)}</span>
+      </span>
+    </button>
   `).join('');
+
   document.querySelectorAll('[data-zona]').forEach(tile => {
     tile.onclick = () => openZona(tile.getAttribute('data-zona'));
   });
 }
 
-function openZona(huruf){
-  state.currentZona = huruf;
-  el('dashDcName').innerHTML = `<div class="mark"><i class="ti ${state.currentDc.icon||'ti-box'}"></i></div>${state.currentDc.nama} · Zona ${huruf}`;
+function openZona(namaZona){
+  state.currentZona = namaZona;
+  el('dashDcName').innerHTML = `<div class="mark"><i class="ti ${state.currentDc.icon||'ti-box'}"></i></div>${state.currentDc.nama} · Zona ${namaZona}`;
   el('searchInput').value = '';
   state.searchQuery = '';
 
@@ -890,7 +946,7 @@ el('searchInput').addEventListener('input', (e) => {
 function renderDashboard(){
   // Produk yang termasuk zona yang lagi dipilih
   const produkZonaIni = state.produkList.filter(p =>
-    (p.zona || '').trim().toUpperCase() === state.currentZona
+    (p.zona || '').trim().toUpperCase() === (state.currentZona || '').trim().toUpperCase()
   );
 
   if(!state.activeSessionId){
