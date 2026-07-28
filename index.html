@@ -227,6 +227,7 @@
   }
   .search-box i{ color:var(--muted); font-size:15px; }
   .search-box input{ border:none; outline:none; font-size:13.5px; width:100%; background:transparent; }
+  .sector-filter{ min-width:150px; }
 
   .dash-content{ max-width:1200px; margin:0 auto; padding:20px 18px 100px; }
   .produk-grid{
@@ -244,15 +245,24 @@
   }
   .produk-card .nama{ font-weight:600; font-size:14px; line-height:1.3; flex:1; }
   .produk-card .qty-row{
-    display:flex; align-items:baseline; gap:6px; margin-top:auto;
+    display:flex; align-items:baseline; gap:6px; margin-top:auto; flex-wrap:wrap;
   }
   .produk-card .qty{
     font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:22px; color:var(--primary);
   }
-  .produk-card .qty.kosong{ color:var(--muted); font-weight:500; font-size:15px; }
+  .produk-card .qty.kosong{
+    color:var(--muted); font-weight:500; font-size:12.5px; font-family:'Inter',sans-serif;
+  }
   .produk-card .uom{ font-size:12px; color:var(--muted); }
+  .produk-card .produk-footer{
+    display:flex; align-items:center; justify-content:space-between; gap:6px;
+  }
   .produk-card .scanned-by{
     font-size:10.5px; color:var(--success); font-weight:600;
+  }
+  .produk-card .sector-tag{
+    font-size:10px; color:var(--muted); background:var(--surface-0);
+    padding:2px 8px; border-radius:20px; white-space:nowrap; margin-left:auto;
   }
 
   .zona-section{ margin-bottom:24px; }
@@ -395,6 +405,9 @@
       <i class="ti ti-search"></i>
       <input type="text" id="searchInput" placeholder="Cari produk...">
     </div>
+    <select id="sectorFilterSelect" class="sector-filter">
+      <option value="">Semua Sector</option>
+    </select>
   </div>
   <div class="dash-content">
     <div class="produk-grid" id="produkGrid"></div>
@@ -402,7 +415,7 @@
       <p>Memuat sesi opname...</p>
     </div>
     <div class="empty-state hidden" id="emptyZonaMsg">
-      <p>Belum ada produk yang ke-assign ke zona ini.<br>Nanti otomatis keisi begitu produk discan lewat app abwarehouse.</p>
+      <p>Belum ada produk yang ke-assign ke sector di zona ini.<br>Hubungi admin buat nambahin produk ke sector lewat Supabase (tabel produk_sectors).</p>
     </div>
   </div>
   <div class="footer-bar">
@@ -469,6 +482,10 @@ let state = {
   produkList: [],
   sessions: [],
   zonesList: [],
+  sectorsList: [],
+  sectorFilter: '',
+  currentZonaId: null,
+  profilesById: {},
   activeSessionId: null,
   entries: {},
   searchQuery: '',
@@ -555,7 +572,7 @@ async function forceLogout(){
 async function afterLogin(){
   await loadProfile();
 
-  if(state.profile?.role === 'scanner'){
+  if(state.profile?.admin === 'scanner'){
     await sb.auth.signOut();
     el('loginError').textContent = 'Akun ini cuma bisa dipake login di app abwarehouse, bukan di web.';
     el('loginError').classList.add('show');
@@ -580,15 +597,20 @@ async function afterLogin(){
 // DC SELECTOR
 // =========================================================
 async function loadDcs(){
-  const { data } = await sb.from('dcs').select('*').order('urutan');
+  const { data, error } = await sb.from('dcs').select('*').order('urutan');
+  if(error){
+    console.error('Gagal muat dcs:', error);
+    state.dcs = [];
+    return;
+  }
   state.dcs = data || [];
 }
 
 function renderSelector(){
-  el('userChip').innerHTML = `<i class="ti ti-user-circle"></i> ${state.profile?.nama || state.session?.user?.email || 'User'} ${state.profile?.role === 'admin' ? '· Admin' : ''}`;
+  el('userChip').innerHTML = `<i class="ti ti-user-circle"></i> ${state.profile?.nama || state.session?.user?.email || 'User'} ${state.profile?.admin === 'admin' ? '· Admin' : ''}`;
 
   let dcsToShow = state.dcs;
-  if(state.profile?.role !== 'admin'){
+  if(state.profile?.admin !== 'admin'){
     dcsToShow = state.dcs.filter(d => d.id === state.profile?.dc_id);
     el('selectorHint').textContent = 'DC yang bisa lo akses:';
   }
@@ -646,7 +668,6 @@ async function openDc(dcId){
   hide('selectorScreen');
   show('sessionListScreen');
 
-  await loadProduk(dcId);
   await loadSessions(dcId);
   renderSessionList();
 }
@@ -890,7 +911,7 @@ function renderZonaGrid(){
   hide('emptyZonaListMsg');
 
   el('zonaGrid').innerHTML = state.zonesList.map(z => `
-    <button class="zona-card" data-zona="${z.nama}">
+    <button class="zona-card" data-zona="${z.id}">
       <span class="zona-name">${z.nama}</span>
       <span class="zona-meta">
         <span><i class="ti ti-stairs-up"></i> Lantai ${z.lantai ?? '-'}</span>
@@ -904,15 +925,22 @@ function renderZonaGrid(){
   });
 }
 
-function openZona(namaZona){
-  state.currentZona = namaZona;
-  el('dashDcName').innerHTML = `<div class="mark"><i class="ti ${state.currentDc.icon||'ti-box'}"></i></div>${state.currentDc.nama} · Zona ${namaZona}`;
+async function openZona(zonaId){
+  const zona = state.zonesList.find(z => z.id === zonaId);
+  state.currentZonaId = zonaId;
+  state.currentZona = zona ? zona.nama : '';
+  state.sectorFilter = '';
+
+  el('dashDcName').innerHTML = `<div class="mark"><i class="ti ${state.currentDc.icon||'ti-box'}"></i></div>${state.currentDc.nama} · Zona ${state.currentZona}`;
   el('searchInput').value = '';
   state.searchQuery = '';
 
   hide('zonaScreen');
   show('dashboardScreen');
   setSync(false, 'memuat...');
+
+  await loadProdukForZona(zonaId);
+  renderSectorFilterOptions();
   renderDashboard();
   subscribeRealtime();
   setSync(true, 'tersambung');
@@ -921,9 +949,58 @@ function openZona(namaZona){
 // =========================================================
 // DASHBOARD
 // =========================================================
-async function loadProduk(dcId){
-  const { data } = await sb.from('produk').select('*').eq('dc_id', dcId).order('nama');
-  state.produkList = data || [];
+// Muat sector-sector di zona ini, terus produk yang ke-assign di sector-sector
+// itu (lewat tabel junction produk_sectors), di-join ke master_produk buat
+// detail nama/kategori/dll.
+async function loadProdukForZona(zonaId){
+  const { data: sectorsData, error: sectorsErr } = await sb
+    .from('sectors').select('*').eq('zone_id', zonaId).order('nama');
+  if(sectorsErr){
+    console.error('Gagal muat sectors:', sectorsErr);
+    state.sectorsList = [];
+    state.produkList = [];
+    return;
+  }
+  state.sectorsList = sectorsData || [];
+
+  const sectorIds = state.sectorsList.map(s => s.id);
+  if(!sectorIds.length){
+    state.produkList = [];
+    return;
+  }
+
+  const { data: psData, error: psErr } = await sb
+    .from('produk_sectors')
+    .select('id, sector_id, barcode, master_produk(nama, kode_produk, kategori, sub_kategori, satuan)')
+    .in('sector_id', sectorIds);
+  if(psErr){
+    console.error('Gagal muat produk_sectors:', psErr);
+    state.produkList = [];
+    return;
+  }
+
+  state.produkList = (psData || []).map(ps => {
+    const sector = state.sectorsList.find(s => s.id === ps.sector_id);
+    return {
+      id: ps.id,
+      barcode: ps.barcode,
+      nama: ps.master_produk?.nama || '(produk tak dikenal)',
+      kode_produk: ps.master_produk?.kode_produk || '',
+      kategori: ps.master_produk?.kategori || '',
+      sub_kategori: ps.master_produk?.sub_kategori || '',
+      satuan: ps.master_produk?.satuan || '',
+      sector_id: ps.sector_id,
+      sector_nama: sector ? sector.nama : '-',
+    };
+  });
+}
+
+function renderSectorFilterOptions(){
+  const sel = el('sectorFilterSelect');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Semua Sector</option>' +
+    state.sectorsList.map(s => `<option value="${s.id}">${s.nama}</option>`).join('');
+  sel.value = state.sectorFilter || '';
 }
 
 async function loadSessions(dcId){
@@ -933,9 +1010,29 @@ async function loadSessions(dcId){
 
 async function loadEntries(){
   if(!state.activeSessionId) return;
-  const { data } = await sb.from('opname_entries').select('*').eq('session_id', state.activeSessionId);
+  const { data, error } = await sb
+    .from('opname_entries')
+    .select('*, profiles(nama)')
+    .eq('session_id', state.activeSessionId);
+  if(error){
+    console.error('Gagal muat opname_entries:', error);
+    state.entries = {};
+    return;
+  }
   state.entries = {};
-  (data||[]).forEach(e => state.entries[e.produk_id] = e);
+  (data||[]).forEach(e => {
+    if(e.updated_by && e.profiles?.nama) state.profilesById[e.updated_by] = e.profiles.nama;
+    state.entries[e.barcode] = e;
+  });
+}
+
+// updated_by di opname_entries itu uuid (FK ke profiles.id), bukan nama
+// langsung. Fungsi ini nyari nama yang cocok -- dari join Supabase kalau ada,
+// atau dari cache profilesById kalau datangnya lewat realtime (payload
+// postgres_changes gak bawa data hasil join).
+function getUpdatedByNama(e){
+  if(!e || !e.updated_by) return null;
+  return e.profiles?.nama || state.profilesById[e.updated_by] || null;
 }
 
 el('searchInput').addEventListener('input', (e) => {
@@ -943,11 +1040,17 @@ el('searchInput').addEventListener('input', (e) => {
   renderDashboard();
 });
 
+el('sectorFilterSelect').addEventListener('change', (e) => {
+  state.sectorFilter = e.target.value;
+  renderDashboard();
+});
+
 function renderDashboard(){
-  // Produk yang termasuk zona yang lagi dipilih
-  const produkZonaIni = state.produkList.filter(p =>
-    (p.zona || '').trim().toUpperCase() === (state.currentZona || '').trim().toUpperCase()
-  );
+  // Produk di zona ini (udah discope dari loadProdukForZona), difilter lagi
+  // per sector kalau ada filter yang dipilih
+  const produkZonaIni = state.sectorFilter
+    ? state.produkList.filter(p => p.sector_id === state.sectorFilter)
+    : state.produkList;
 
   if(!state.activeSessionId){
     hide('produkGrid');
@@ -979,23 +1082,26 @@ function renderDashboard(){
     el('produkGrid').innerHTML = `<div class="empty-state">Gak ada produk yang cocok.</div>`;
   } else {
     el('produkGrid').innerHTML = filtered.map(p => {
-      const e = state.entries[p.id];
+      const e = state.entries[p.barcode];
       const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : null;
       return `
         <div class="produk-card">
           <span class="kategori-tag">${p.kategori || '-'}</span>
           <div class="nama">${p.nama}</div>
           <div class="qty-row">
-            <span class="qty ${qty === null ? 'kosong' : ''}">${qty === null ? '—' : qty}</span>
-            <span class="uom">${p.satuan || ''}</span>
+            <span class="qty ${qty === null ? 'kosong' : ''}">${qty === null ? 'Belum dihitung' : qty}</span>
+            ${qty === null ? '' : `<span class="uom">${p.satuan || ''}</span>`}
           </div>
-          ${e?.updated_by ? `<div class="scanned-by">✓ ${e.updated_by}</div>` : ''}
+          <div class="produk-footer">
+            ${getUpdatedByNama(e) ? `<span class="scanned-by">✓ ${getUpdatedByNama(e)}</span>` : '<span></span>'}
+            <span class="sector-tag">${p.sector_nama}</span>
+          </div>
         </div>`;
     }).join('');
   }
 
   const checked = produkZonaIni.filter(p => {
-    const e = state.entries[p.id];
+    const e = state.entries[p.barcode];
     return e && e.qty_fisik !== null && e.qty_fisik !== undefined;
   }).length;
   el('statChecked').textContent = `${checked}/${produkZonaIni.length}`;
@@ -1005,7 +1111,7 @@ function renderDashboard(){
 function updatePrintBtnState(produkZonaIni){
   const total = produkZonaIni.length;
   const checked = produkZonaIni.filter(p => {
-    const e = state.entries[p.id];
+    const e = state.entries[p.barcode];
     return e && e.qty_fisik !== null && e.qty_fisik !== undefined;
   }).length;
   const btn = el('printBtn');
@@ -1022,23 +1128,37 @@ function setSync(ok, text){
 
 function subscribeRealtime(){
   if(state.realtimeChannel) sb.removeChannel(state.realtimeChannel);
-  state.realtimeChannel = sb.channel('inventory-sync-' + state.currentDc.id)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'opname_entries' }, payload => {
+  state.realtimeChannel = sb.channel('inventory-sync-' + state.currentZonaId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'opname_entries' }, async payload => {
       const row = payload.new || payload.old;
       if(!row || row.session_id !== state.activeSessionId) return;
       if(payload.eventType === 'DELETE'){
-        delete state.entries[row.produk_id];
+        delete state.entries[row.barcode];
       } else {
-        state.entries[row.produk_id] = row;
+        // Payload realtime gak bawa hasil join ke profiles, jadi kalau namanya
+        // belum ke-cache, ambil dulu biar 'discan oleh' langsung tampil nama.
+        if(row.updated_by && !state.profilesById[row.updated_by]){
+          const { data: profileData } = await sb.from('profiles').select('nama').eq('id', row.updated_by).single();
+          if(profileData?.nama) state.profilesById[row.updated_by] = profileData.nama;
+        }
+        state.entries[row.barcode] = row;
       }
       renderDashboard();
     })
-    .on('postgres_changes', {
-      event: 'UPDATE', schema: 'public', table: 'produk',
-      filter: `dc_id=eq.${state.currentDc.id}`
-    }, payload => {
-      const idx = state.produkList.findIndex(p => p.id === payload.new.id);
-      if(idx >= 0) state.produkList[idx] = payload.new;
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'produk_sectors' }, async payload => {
+      const row = payload.new || payload.old;
+      const sectorIds = state.sectorsList.map(s => s.id);
+      if(!row || !sectorIds.includes(row.sector_id)) return;
+      // Sesuatu berubah di produk_sectors buat zona ini -- muat ulang biar
+      // konsisten (nambah/hapus produk dari sector, dll).
+      await loadProdukForZona(state.currentZonaId);
+      renderSectorFilterOptions();
+      renderDashboard();
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'master_produk' }, async payload => {
+      const barcode = payload.new?.barcode;
+      if(!barcode || !state.produkList.some(p => p.barcode === barcode)) return;
+      await loadProdukForZona(state.currentZonaId);
       renderDashboard();
     })
     .subscribe(status => {
@@ -1054,7 +1174,7 @@ function buildExportRows(){
   const rows = [['Stock Opname Template'], [], header];
   let no = 1;
   state.produkList.forEach(p => {
-    const e = state.entries[p.id];
+    const e = state.entries[p.barcode];
     const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : '';
     rows.push([no++, p.nama, p.kode_produk || '', p.kategori || '', p.sub_kategori || '', p.satuan || '', qty, '']);
   });
