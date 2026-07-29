@@ -107,6 +107,40 @@
     display:flex; align-items:center; gap:5px; padding:6px 4px;
   }
 
+  /* ============ SESSION REVIEW (Konfirmasi Selesai) ============ */
+  #sessionReviewScreen .wrap{ max-width:980px; margin:0 auto; padding:28px 18px 100px; }
+  #sessionReviewScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px; }
+  #sessionReviewScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0 0 20px; }
+  .review-table-wrap{
+    border:1px solid var(--border); border-radius:var(--radius); overflow:auto;
+    background:var(--surface-1); box-shadow:var(--shadow); max-height:65vh;
+  }
+  .review-table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  .review-table thead th{
+    background:var(--primary); color:#fff; text-align:left; font-weight:600;
+    padding:11px 12px; position:sticky; top:0; z-index:1; white-space:nowrap;
+  }
+  .review-table tbody td{ padding:9px 12px; border-top:1px solid var(--border); vertical-align:middle; }
+  .review-table tbody tr:nth-child(even){ background:var(--surface-0); }
+  .review-table td.num, .review-table th.num{ text-align:center; }
+  .review-table input.qty-final-input{
+    width:84px; padding:7px 8px; border:1px solid var(--border); border-radius:7px;
+    font-size:13.5px; text-align:center; background:#fff;
+  }
+  .review-table input.qty-final-input:focus{ outline:2px solid var(--primary); outline-offset:1px; }
+  .review-table input.qty-final-input.changed{ border-color:var(--warn); background:var(--warn-soft); }
+  .review-footer{
+    position:sticky; bottom:0; background:var(--surface-1); border-top:1px solid var(--border);
+    padding:16px 18px; display:flex; justify-content:flex-end; gap:10px; margin-top:20px;
+    border-radius:var(--radius); box-shadow:var(--shadow);
+  }
+  .btn-success{
+    background:var(--success); color:#fff; padding:11px 20px; border-radius:9px;
+    font-weight:600; font-size:14px; display:flex; align-items:center; gap:6px;
+  }
+  .btn-success:hover{ background:#1c3a06; }
+  .btn-success:disabled{ opacity:0.6; cursor:not-allowed; }
+
   /* ============ DC SELECTOR ============ */
   #selectorScreen .wrap{ max-width:760px; margin:0 auto; padding:36px 18px 60px; }
   #selectorScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px; }
@@ -208,6 +242,23 @@
   .btn-danger:hover{ background:#5f1717; }
   .btn-danger:disabled{ opacity:0.6; cursor:not-allowed; }
   .modal-actions .btn-amber:disabled{ opacity:0.6; cursor:not-allowed; }
+
+  .export-option{
+    display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+    padding:13px 14px; border:1px solid var(--border); border-radius:10px;
+    background:var(--surface-1); margin-bottom:10px; transition:border-color .15s, background .15s;
+  }
+  .export-option:hover{ border-color:var(--primary); background:var(--primary-soft); }
+  .export-option .ico{
+    width:34px; height:34px; border-radius:9px; background:var(--primary-soft); color:var(--primary);
+    display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0;
+  }
+  .export-option .txt{ display:flex; flex-direction:column; gap:2px; }
+  .export-option .txt .label{ font-weight:600; font-size:14px; color:var(--ink); }
+  .export-option .txt .desc{ font-size:12px; color:var(--muted); }
+  .export-option:disabled{ opacity:0.55; cursor:not-allowed; }
+  .export-option:disabled:hover{ border-color:var(--border); background:var(--surface-1); }
+  .export-option:disabled .ico{ background:var(--surface-0); color:var(--muted); }
 
   /* ============ DASHBOARD ============ */
   .session-bar{
@@ -321,8 +372,8 @@
     <p class="sub">Distribusi & Inventory</p>
     <div class="login-error" id="loginError"></div>
     <div class="field">
-      <label>Email</label>
-      <input type="email" id="loginEmail" placeholder="nama@abuyagroup.com" autocomplete="username">
+      <label>Username</label>
+      <input type="text" id="loginEmail" placeholder="nama" autocomplete="username">
     </div>
     <div class="field">
       <label>Password</label>
@@ -368,6 +419,42 @@
     </div>
     <div class="session-list" id="sessionListGrid"></div>
     <div class="empty-state hidden" id="emptySessionMsg"><p>Belum ada sesi opname buat DC ini.<br>Klik "Sesi Baru" buat mulai.</p></div>
+  </div>
+</div>
+
+<!-- ============ SESSION REVIEW (Konfirmasi Selesai) ============ -->
+<div id="sessionReviewScreen" class="hidden">
+  <div class="topbar">
+    <button class="back-btn" id="backFromReviewBtn"><i class="ti ti-arrow-left"></i> Batal</button>
+    <div class="brand" id="reviewSessionName"></div>
+    <div class="topbar-right">
+      <span class="user-chip" id="userChip5"></span>
+      <button class="btn-ghost" id="logoutBtn5">Logout</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <h1>Review &amp; Konfirmasi Selesai</h1>
+    <p class="hint">Cek qty hasil counting, revisi kalau perlu di kolom "Qty Final", baru konfirmasi buat nutup sesi ini.</p>
+    <div class="review-table-wrap">
+      <table class="review-table">
+        <thead>
+          <tr>
+            <th>Nama Produk</th>
+            <th>Barcode</th>
+            <th>Sector</th>
+            <th class="num">Unit</th>
+            <th class="num">Qty Counting</th>
+            <th class="num">Qty Final</th>
+          </tr>
+        </thead>
+        <tbody id="reviewTableBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state hidden" id="emptyReviewMsg"><p>Belum ada produk yang discan di sesi ini.</p></div>
+    <div class="review-footer">
+      <button class="btn-ghost" id="cancelReviewBtn">Batal</button>
+      <button class="btn-success" id="confirmReviewBtn"><i class="ti ti-check"></i> Konfirmasi &amp; Selesaikan Sesi</button>
+    </div>
   </div>
 </div>
 
@@ -459,6 +546,31 @@
   </div>
 </div>
 
+<!-- ============ MODAL: EXPORT SESI ============ -->
+<div id="exportModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h2>Export Sesi</h2>
+    <p class="modal-desc" id="exportModalDesc" style="margin-bottom:16px;"></p>
+    <button class="export-option" id="exportOptionPdf">
+      <span class="ico"><i class="ti ti-file-type-pdf"></i></span>
+      <span class="txt">
+        <span class="label">Counting 1 (PDF)</span>
+        <span class="desc">Lembar counting per sector, siap print & gunting</span>
+      </span>
+    </button>
+    <button class="export-option" id="exportOptionXlsx">
+      <span class="ico"><i class="ti ti-file-type-xls"></i></span>
+      <span class="txt">
+        <span class="label">SO Template (Excel)</span>
+        <span class="desc" id="exportOptionXlsxDesc">Qty final hasil otorisasi admin</span>
+      </span>
+    </button>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="exportModalCancel">Batal</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // =========================================================
 // KONFIGURASI
@@ -496,6 +608,9 @@ let state = {
   sessionModalMode: null,
   sessionModalEditingId: null,
   deletingSessionId: null,
+  reviewSessionId: null,
+  reviewRows: [],
+  exportingSession: null,
 };
 
 function formatTanggal(t){
@@ -515,8 +630,19 @@ const hide = id => el(id).classList.add('hidden');
 el('loginBtn').onclick = doLogin;
 el('loginPassword').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
 
+// Domain internal buat akun Supabase. User cuma perlu inget username-nya
+// doang, domain ini nempel otomatis di belakang layar.
+const EMAIL_DOMAIN = 'abuyagroup.com';
+
+// Terima input "budi" ATAU "budi@abuyagroup.com" -- dua-duanya jalan.
+function buildLoginEmail(input){
+  const trimmed = (input || '').trim();
+  if(trimmed.includes('@')) return trimmed;
+  return `${trimmed}@${EMAIL_DOMAIN}`;
+}
+
 async function doLogin(){
-  const email = el('loginEmail').value.trim();
+  const email = buildLoginEmail(el('loginEmail').value);
   const password = el('loginPassword').value;
   el('loginError').classList.remove('show');
   el('loginBtn').disabled = true;
@@ -689,7 +815,7 @@ function renderSessionList(){
         <div class="meta"><span>${formatTanggal(s.tanggal)}</span><span class="status-badge ${s.status}">${s.status}</span></div>
       </div>
       <div class="actions">
-        <button class="btn-icon" data-action="print" data-id="${s.id}" title="Print Counting Sheet"><i class="ti ti-printer"></i></button>
+        <button class="btn-icon" data-action="export" data-id="${s.id}" title="Export"><i class="ti ti-download"></i></button>
         <button class="btn-icon" data-action="rename" data-id="${s.id}" title="Edit sesi"><i class="ti ti-edit"></i></button>
         <button class="btn-icon" data-action="toggle" data-id="${s.id}" title="${s.status==='aktif' ? 'Tandai selesai' : 'Aktifkan lagi'}"><i class="ti ${s.status==='aktif' ? 'ti-check' : 'ti-refresh'}"></i></button>
         <button class="btn-icon danger" data-action="delete" data-id="${s.id}" title="Hapus sesi"><i class="ti ti-trash"></i></button>
@@ -705,9 +831,14 @@ function renderSessionList(){
       const s = state.sessions.find(x => x.id === id);
       if(action === 'open') openSession(id);
       else if(action === 'rename') openSessionModal('edit', s);
-      else if(action === 'toggle') toggleSessionStatus(id);
+      else if(action === 'toggle'){
+        // Sesi aktif -> mau ditandai selesai -> wajib lewat review qty final dulu.
+        // Sesi selesai -> mau diaktifin lagi -> langsung toggle, gak perlu review.
+        if(s.status === 'aktif') openSessionReview(id);
+        else toggleSessionStatus(id);
+      }
       else if(action === 'delete') openDeleteModal(s);
-      else if(action === 'print') printSessionPdf(id);
+      else if(action === 'export') openExportModal(s);
     };
   });
 }
@@ -808,6 +939,138 @@ el('deleteModal').addEventListener('click', e => {
   if(e.target.id === 'deleteModal') closeDeleteModal();
 });
 
+// =========================================================
+// MODAL: EXPORT SESI
+// =========================================================
+// Sesi AKTIF -> cuma boleh export Counting 1 (PDF), soalnya opname_final
+// baru keisi setelah sesi dikonfirmasi selesai lewat halaman review.
+// Sesi SELESAI -> boleh export dua-duanya.
+function openExportModal(session){
+  state.exportingSession = session;
+  const isSelesai = session.status === 'selesai';
+
+  el('exportModalDesc').textContent = `Sesi "${session.nama}"`;
+
+  const xlsxBtn = el('exportOptionXlsx');
+  xlsxBtn.disabled = !isSelesai;
+  el('exportOptionXlsxDesc').textContent = isSelesai
+    ? 'Qty final hasil otorisasi admin'
+    : 'Tersedia setelah sesi ditandai Selesai';
+
+  show('exportModal');
+}
+
+function closeExportModal(){
+  hide('exportModal');
+  state.exportingSession = null;
+}
+
+el('exportModalCancel').onclick = closeExportModal;
+el('exportModal').addEventListener('click', e => {
+  if(e.target.id === 'exportModal') closeExportModal();
+});
+
+el('exportOptionPdf').onclick = () => {
+  if(!state.exportingSession) return;
+  const sessionId = state.exportingSession.id;
+  closeExportModal();
+  printSessionPdf(sessionId);
+};
+
+el('exportOptionXlsx').onclick = () => {
+  if(!state.exportingSession || el('exportOptionXlsx').disabled) return;
+  const session = state.exportingSession;
+  closeExportModal();
+  exportSoTemplateXlsx(session);
+};
+
+// SO Template (Excel) -- sumbernya opname_final (qty yang UDAH diotorisasi
+// admin lewat halaman review), bukan opname_entries. Makanya cuma tersedia
+// buat sesi yang statusnya udah 'selesai' (karena opname_final baru keisi
+// pas admin confirm di halaman review).
+async function exportSoTemplateXlsx(session){
+  try {
+    const { data: finalData, error: finalErr } = await sb
+      .from('opname_final')
+      .select('barcode, qty_final, authorized_at, master_produk(nama, kode_produk, kategori, sub_kategori, satuan)')
+      .eq('session_id', session.id)
+      .order('authorized_at', { ascending: false });
+    if(finalErr) throw finalErr;
+
+    if(!finalData || !finalData.length){
+      alert('Belum ada data qty final buat sesi ini (opname_final masih kosong).');
+      return;
+    }
+
+    // Kalau sesi ini pernah di-confirm lebih dari sekali, ambil yang paling
+    // baru per barcode aja (data udah diurut DESC by authorized_at).
+    const latestByBarcode = {};
+    finalData.forEach(row => {
+      if(!latestByBarcode[row.barcode]) latestByBarcode[row.barcode] = row;
+    });
+    const rows = Object.values(latestByBarcode).sort((a, b) => a.barcode.localeCompare(b.barcode));
+
+    const header = ['No', 'Product Name', 'Product Code', 'Category', 'Sub Category', 'Unit', 'Opname Qty', 'Opname Value'];
+    const dcNama = state.currentDc?.nama || '';
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Sheet1');
+    sheet.columns = [
+      { width: 5 }, { width: 32 }, { width: 14 }, { width: 12 },
+      { width: 16 }, { width: 8 }, { width: 12 }, { width: 14 },
+    ];
+
+    sheet.mergeCells(1, 1, 1, header.length);
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = 'Stock Opname Template';
+    titleCell.font = { bold: true, size: 14, color: { argb: 'FF0C467C' } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.getRow(1).height = 24;
+
+    sheet.addRow([]); // baris kosong pemisah (row 2)
+
+    const headerRow = sheet.addRow(header);
+    headerRow.eachCell(cell => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0C467C' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = THIN_BORDER;
+    });
+    headerRow.height = 20;
+
+    let no = 1;
+    rows.forEach(row => {
+      const p = row.master_produk || {};
+      const qty = row.qty_final ?? 0;
+      const value = 0; // belum ada data harga per produk, defaultnya 0 (bukan kosong)
+
+      const r = sheet.addRow([no, p.nama || '(produk tak dikenal)', p.kode_produk || '', p.kategori || '', p.sub_kategori || '', p.satuan || '', qty, value]);
+      r.eachCell((cell, colNumber) => {
+        cell.border = THIN_BORDER;
+        cell.alignment = { vertical: 'middle', horizontal: (colNumber === 1 || colNumber === 6 || colNumber === 7 || colNumber === 8) ? 'center' : 'left' };
+        if(no % 2 === 0){
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF6F8FB' } };
+        }
+      });
+      no++;
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${dcNama.replace(/\s+/g, '_')}_${session.nama.replace(/\s+/g, '_')}_SO_Template.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Gagal export SO Template:', err);
+    alert('Gagal export SO Template: ' + (err.message || err));
+  }
+}
+
 el('deleteModalConfirm').onclick = async () => {
   const id = state.deletingSessionId;
   if(!id) return;
@@ -866,6 +1129,164 @@ async function toggleSessionStatus(id){
   await loadSessions(state.currentDc.id);
   renderSessionList();
 }
+
+// =========================================================
+// SESSION REVIEW -- revisi qty final sebelum sesi ditutup
+// =========================================================
+async function openSessionReview(sessionId){
+  const session = state.sessions.find(x => x.id === sessionId);
+  if(!session) return;
+
+  state.reviewSessionId = sessionId;
+  state.reviewRows = [];
+  el('reviewSessionName').innerHTML = `<div class="mark"><i class="ti ti-clipboard-check"></i></div>${session.nama}`;
+  el('userChip5').innerHTML = el('userChip').innerHTML;
+  el('reviewTableBody').innerHTML = '';
+  hide('emptyReviewMsg');
+  el('confirmReviewBtn').disabled = true;
+
+  hide('sessionListScreen');
+  show('sessionReviewScreen');
+
+  try {
+    // 1. Entries hasil scan buat sesi ini, sekalian detail produknya
+    const { data: entriesData, error: entriesErr } = await sb
+      .from('opname_entries')
+      .select('id, barcode, qty_fisik, master_produk(nama, satuan)')
+      .eq('session_id', sessionId)
+      .order('barcode');
+    if(entriesErr) throw entriesErr;
+
+    if(!entriesData || !entriesData.length){
+      show('emptyReviewMsg');
+      return;
+    }
+
+    // 2. Sector per barcode -- lewat zones -> sectors -> produk_sectors (DC yang sama)
+    const sectorByBarcode = {};
+    const { data: zonesData } = await sb.from('zones').select('id').eq('dc_id', session.dc_id);
+    const zoneIds = (zonesData || []).map(z => z.id);
+    if(zoneIds.length){
+      const { data: sectorsData } = await sb.from('sectors').select('id, nama').in('zone_id', zoneIds);
+      const sectorNamaById = {};
+      (sectorsData || []).forEach(s => { sectorNamaById[s.id] = s.nama; });
+      const sectorIds = (sectorsData || []).map(s => s.id);
+      if(sectorIds.length){
+        const { data: psData } = await sb
+          .from('produk_sectors').select('barcode, sector_id').in('sector_id', sectorIds);
+        (psData || []).forEach(ps => { sectorByBarcode[ps.barcode] = sectorNamaById[ps.sector_id] || '-'; });
+      }
+    }
+
+    state.reviewRows = entriesData.map(e => ({
+      entryId: e.id,
+      barcode: e.barcode,
+      nama: e.master_produk?.nama || '(produk tak dikenal)',
+      satuan: e.master_produk?.satuan || '',
+      sectorNama: sectorByBarcode[e.barcode] || '-',
+      qtyCounting: e.qty_fisik ?? 0,
+    }));
+
+    renderReviewTable();
+  } catch(err){
+    console.error('Gagal muat data review:', err);
+    alert('Gagal muat data review: ' + (err.message || err));
+  } finally {
+    el('confirmReviewBtn').disabled = !(state.reviewRows && state.reviewRows.length);
+  }
+}
+
+function renderReviewTable(){
+  el('reviewTableBody').innerHTML = state.reviewRows.map((row, idx) => `
+    <tr>
+      <td>${row.nama}</td>
+      <td>${row.barcode}</td>
+      <td>${row.sectorNama}</td>
+      <td class="num">${row.satuan}</td>
+      <td class="num">${row.qtyCounting}</td>
+      <td class="num">
+        <input type="number" step="any" class="qty-final-input" data-idx="${idx}" value="${row.qtyCounting}">
+      </td>
+    </tr>
+  `).join('');
+
+  el('reviewTableBody').querySelectorAll('.qty-final-input').forEach(input => {
+    input.addEventListener('input', () => {
+      const idx = Number(input.getAttribute('data-idx'));
+      const original = state.reviewRows[idx].qtyCounting;
+      const changed = input.value === '' || Number(input.value) !== Number(original);
+      input.classList.toggle('changed', changed);
+    });
+  });
+}
+
+function closeSessionReview(){
+  state.reviewSessionId = null;
+  state.reviewRows = [];
+  hide('sessionReviewScreen');
+  show('sessionListScreen');
+}
+
+el('backFromReviewBtn').onclick = () => closeSessionReview();
+el('cancelReviewBtn').onclick = () => closeSessionReview();
+el('logoutBtn5').onclick = () => forceLogout();
+
+el('confirmReviewBtn').onclick = async () => {
+  if(!state.reviewSessionId || !state.reviewRows.length) return;
+
+  const authorizedBy = state.session?.user?.id;
+  if(!authorizedBy){
+    alert('Sesi login gak valid, coba login ulang.');
+    return;
+  }
+
+  const confirmed = confirm(
+    'Yakin mau konfirmasi & tandai sesi ini SELESAI? Qty final bakal disimpen ke opname_final dan sesi ini gak bisa discan lagi kecuali diaktifin ulang.'
+  );
+  if(!confirmed) return;
+
+  const btn = el('confirmReviewBtn');
+  const originalLabel = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader-2"></i> Menyimpan...';
+
+  try {
+    // Baca ulang nilai Qty Final dari tiap input, biar dapet nilai paling baru
+    el('reviewTableBody').querySelectorAll('.qty-final-input').forEach(input => {
+      const idx = Number(input.getAttribute('data-idx'));
+      state.reviewRows[idx].qtyFinal = input.value === '' ? 0 : Number(input.value);
+    });
+
+    // Qty final (hasil review/revisi admin) disimpen ke opname_final --
+    // BUKAN nulis balik ke opname_entries, biar data mentah hasil scan
+    // (opname_entries) tetep utuh sebagai arsip, terpisah dari angka yang
+    // udah di-otorisasi admin.
+    const payload = state.reviewRows.map(row => ({
+      session_id: state.reviewSessionId,
+      barcode: row.barcode,
+      qty_final: row.qtyFinal,
+      authorized_by: authorizedBy,
+    }));
+
+    const { error: insertErr } = await sb.from('opname_final').insert(payload);
+    if(insertErr) throw insertErr;
+
+    // Tandai sesi selesai
+    const { error: statusErr } = await sb
+      .from('opname_sessions').update({ status: 'selesai' }).eq('id', state.reviewSessionId);
+    if(statusErr) throw statusErr;
+
+    await loadSessions(state.currentDc.id);
+    closeSessionReview();
+    renderSessionList();
+  } catch(err){
+    console.error('Gagal konfirmasi sesi:', err);
+    alert('Gagal konfirmasi: ' + (err.message || err));
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalLabel;
+  }
+};
 
 // =========================================================
 // PRINT COUNTING SHEET (PDF) -- dari list sesi
