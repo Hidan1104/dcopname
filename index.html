@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.44.0/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
@@ -1304,26 +1304,94 @@ function subscribeRealtime(){
 // =========================================================
 // EXPORT
 // =========================================================
-function buildExportRows(){
-  const header = ['No','Product Name','Product Code','Category','Sub Category','Unit','Opname Qty','Opname Value'];
-  const rows = [['Stock Opname Template'], [], header];
-  let no = 1;
-  state.produkList.forEach(p => {
-    const e = state.entries[p.barcode];
-    const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : '';
-    rows.push([no++, p.nama, p.kode_produk || '', p.kategori || '', p.sub_kategori || '', p.satuan || '', qty, '']);
-  });
-  return rows;
-}
+const THIN_BORDER = {
+  top: { style: 'thin', color: { argb: 'FFD8DEE9' } },
+  left: { style: 'thin', color: { argb: 'FFD8DEE9' } },
+  bottom: { style: 'thin', color: { argb: 'FFD8DEE9' } },
+  right: { style: 'thin', color: { argb: 'FFD8DEE9' } },
+};
 
-el('exportXlsxBtn').onclick = () => {
-  const aoa = buildExportRows();
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [{wch:5},{wch:32},{wch:14},{wch:12},{wch:16},{wch:8},{wch:12},{wch:14}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-  const sessionName = state.sessions.find(s => s.id === state.activeSessionId)?.nama || 'opname';
-  XLSX.writeFile(wb, `${state.currentDc.nama.replace(/\s+/g,'_')}_${sessionName.replace(/\s+/g,'_')}.xlsx`);
+el('exportXlsxBtn').onclick = async () => {
+  const btn = el('exportXlsxBtn');
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Menyiapkan...';
+
+  try {
+    const header = ['No', 'Product Name', 'Product Code', 'Category', 'Sub Category', 'Unit', 'Opname Qty', 'Opname Value'];
+    const sessionName = state.sessions.find(s => s.id === state.activeSessionId)?.nama || 'opname';
+    const dcNama = state.currentDc?.nama || '';
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Sheet1');
+    sheet.columns = [
+      { width: 5 }, { width: 32 }, { width: 14 }, { width: 12 },
+      { width: 16 }, { width: 8 }, { width: 12 }, { width: 14 },
+    ];
+
+    // Judul
+    sheet.mergeCells(1, 1, 1, header.length);
+    const titleCell = sheet.getCell('A1');
+    titleCell.value = 'Stock Opname Template';
+    titleCell.font = { bold: true, size: 14, color: { argb: 'FF0C467C' } };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    sheet.getRow(1).height = 24;
+
+    // Sub judul: DC & sesi
+    sheet.mergeCells(2, 1, 2, header.length);
+    const subCell = sheet.getCell('A2');
+    subCell.value = `${dcNama} · Sesi: ${sessionName} · Tanggal: ${formatTanggal(state.sessions.find(s => s.id === state.activeSessionId)?.tanggal)}`;
+    subCell.font = { italic: true, size: 10, color: { argb: 'FF667085' } };
+    subCell.alignment = { horizontal: 'center' };
+    sheet.getRow(2).height = 18;
+
+    sheet.addRow([]); // baris kosong pemisah
+
+    // Header tabel
+    const headerRow = sheet.addRow(header);
+    headerRow.eachCell(cell => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0C467C' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = THIN_BORDER;
+    });
+    headerRow.height = 20;
+
+    // Data -- qty & value kosong diisi 0, bukan blank
+    let no = 1;
+    state.produkList.forEach(p => {
+      const e = state.entries[p.barcode];
+      const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : 0;
+      const value = 0; // belum ada data harga per produk, defaultnya 0 (bukan kosong)
+
+      const row = sheet.addRow([no, p.nama, p.kode_produk || '', p.kategori || '', p.sub_kategori || '', p.satuan || '', qty, value]);
+      row.eachCell((cell, colNumber) => {
+        cell.border = THIN_BORDER;
+        cell.alignment = { vertical: 'middle', horizontal: (colNumber === 1 || colNumber === 6 || colNumber === 7 || colNumber === 8) ? 'center' : 'left' };
+        if(no % 2 === 0){
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF6F8FB' } };
+        }
+      });
+      no++;
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${dcNama.replace(/\s+/g, '_')}_${sessionName.replace(/\s+/g, '_')}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Gagal export Excel:', err);
+    alert('Gagal export Excel: ' + (err.message || err));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
 };
 
 el('printBtn').onclick = () => {
