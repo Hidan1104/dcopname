@@ -1337,15 +1337,7 @@ el('exportXlsxBtn').onclick = async () => {
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
     sheet.getRow(1).height = 24;
 
-    // Sub judul: DC & sesi
-    sheet.mergeCells(2, 1, 2, header.length);
-    const subCell = sheet.getCell('A2');
-    subCell.value = `${dcNama} · Sesi: ${sessionName} · Tanggal: ${formatTanggal(state.sessions.find(s => s.id === state.activeSessionId)?.tanggal)}`;
-    subCell.font = { italic: true, size: 10, color: { argb: 'FF667085' } };
-    subCell.alignment = { horizontal: 'center' };
-    sheet.getRow(2).height = 18;
-
-    sheet.addRow([]); // baris kosong pemisah
+    sheet.addRow([]); // baris kosong pemisah (row 2)
 
     // Header tabel
     const headerRow = sheet.addRow(header);
