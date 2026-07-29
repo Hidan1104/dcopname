@@ -509,11 +509,6 @@
   </div>
   <div class="footer-bar">
     <div class="footer-stat">Produk dicek<b id="statChecked">0/0</b></div>
-    <div class="export-group">
-      <button class="btn-ghost" id="exportPdfBtn"><i class="ti ti-file-type-pdf"></i> PDF</button>
-      <button class="btn-print notready" id="printBtn"><i class="ti ti-printer"></i> Print</button>
-      <button class="btn-amber" id="exportXlsxBtn">⤓ Excel</button>
-    </div>
   </div>
 </div>
 
@@ -984,6 +979,13 @@ el('exportOptionXlsx').onclick = () => {
   const session = state.exportingSession;
   closeExportModal();
   exportSoTemplateXlsx(session);
+};
+
+const THIN_BORDER = {
+  top: { style: 'thin', color: { argb: 'FFD8DEE9' } },
+  left: { style: 'thin', color: { argb: 'FFD8DEE9' } },
+  bottom: { style: 'thin', color: { argb: 'FFD8DEE9' } },
+  right: { style: 'thin', color: { argb: 'FFD8DEE9' } },
 };
 
 // SO Template (Excel) -- sumbernya opname_final (qty yang UDAH diotorisasi
@@ -1620,7 +1622,6 @@ function renderDashboard(){
     el('produkGrid').innerHTML = '';
     show('noSessionMsg');
     el('statChecked').textContent = '0/0';
-    updatePrintBtnState(produkZonaIni);
     return;
   }
   hide('noSessionMsg');
@@ -1630,7 +1631,6 @@ function renderDashboard(){
     el('produkGrid').innerHTML = '';
     show('emptyZonaMsg');
     el('statChecked').textContent = '0/0';
-    updatePrintBtnState(produkZonaIni);
     return;
   }
   hide('emptyZonaMsg');
@@ -1667,19 +1667,6 @@ function renderDashboard(){
     return e && e.qty_fisik !== null && e.qty_fisik !== undefined;
   }).length;
   el('statChecked').textContent = `${checked}/${produkZonaIni.length}`;
-  updatePrintBtnState(produkZonaIni);
-}
-
-function updatePrintBtnState(produkZonaIni){
-  const total = produkZonaIni.length;
-  const checked = produkZonaIni.filter(p => {
-    const e = state.entries[`${p.barcode}|${p.sector_id}`];
-    return e && e.qty_fisik !== null && e.qty_fisik !== undefined;
-  }).length;
-  const btn = el('printBtn');
-  const ready = total > 0 && checked === total;
-  btn.classList.toggle('ready', ready);
-  btn.classList.toggle('notready', !ready);
 }
 
 function setSync(ok, text){
@@ -1727,116 +1714,6 @@ function subscribeRealtime(){
       setSync(status === 'SUBSCRIBED', status === 'SUBSCRIBED' ? 'tersambung' : 'terputus');
     });
 }
-
-// =========================================================
-// EXPORT
-// =========================================================
-const THIN_BORDER = {
-  top: { style: 'thin', color: { argb: 'FFD8DEE9' } },
-  left: { style: 'thin', color: { argb: 'FFD8DEE9' } },
-  bottom: { style: 'thin', color: { argb: 'FFD8DEE9' } },
-  right: { style: 'thin', color: { argb: 'FFD8DEE9' } },
-};
-
-el('exportXlsxBtn').onclick = async () => {
-  const btn = el('exportXlsxBtn');
-  const originalLabel = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Menyiapkan...';
-
-  try {
-    const header = ['No', 'Product Name', 'Product Code', 'Category', 'Sub Category', 'Unit', 'Opname Qty', 'Opname Value'];
-    const sessionName = state.sessions.find(s => s.id === state.activeSessionId)?.nama || 'opname';
-    const dcNama = state.currentDc?.nama || '';
-
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Sheet1');
-    sheet.columns = [
-      { width: 5 }, { width: 32 }, { width: 14 }, { width: 12 },
-      { width: 16 }, { width: 8 }, { width: 12 }, { width: 14 },
-    ];
-
-    // Judul
-    sheet.mergeCells(1, 1, 1, header.length);
-    const titleCell = sheet.getCell('A1');
-    titleCell.value = 'Stock Opname Template';
-    titleCell.font = { bold: true, size: 14, color: { argb: 'FF0C467C' } };
-    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-    sheet.getRow(1).height = 24;
-
-    sheet.addRow([]); // baris kosong pemisah (row 2)
-
-    // Header tabel
-    const headerRow = sheet.addRow(header);
-    headerRow.eachCell(cell => {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0C467C' } };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border = THIN_BORDER;
-    });
-    headerRow.height = 20;
-
-    // Data -- qty & value kosong diisi 0, bukan blank
-    let no = 1;
-    state.produkList.forEach(p => {
-      const e = state.entries[`${p.barcode}|${p.sector_id}`];
-      const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : 0;
-      const value = 0; // belum ada data harga per produk, defaultnya 0 (bukan kosong)
-
-      const row = sheet.addRow([no, p.nama, p.kode_produk || '', p.kategori || '', p.sub_kategori || '', p.satuan || '', qty, value]);
-      row.eachCell((cell, colNumber) => {
-        cell.border = THIN_BORDER;
-        cell.alignment = { vertical: 'middle', horizontal: (colNumber === 1 || colNumber === 6 || colNumber === 7 || colNumber === 8) ? 'center' : 'left' };
-        if(no % 2 === 0){
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF6F8FB' } };
-        }
-      });
-      no++;
-    });
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${dcNama.replace(/\s+/g, '_')}_${sessionName.replace(/\s+/g, '_')}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error('Gagal export Excel:', err);
-    alert('Gagal export Excel: ' + (err.message || err));
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalLabel;
-  }
-};
-
-el('printBtn').onclick = () => {
-  window.print();
-};
-
-el('exportPdfBtn').onclick = () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'landscape' });
-  const aoa = buildExportRows();
-  const header = aoa[2];
-  const rows = aoa.slice(3);
-  doc.setFontSize(12);
-  doc.text('Stock Opname Template', 14, 12);
-  doc.setFontSize(9);
-  doc.text(`${state.currentDc.nama} - ${state.currentDc.sub || ''}`, 14, 18);
-  doc.autoTable({
-    head: [header],
-    body: rows,
-    startY: 24,
-    styles: { fontSize: 8 },
-    headStyles: { fillColor: [12,70,124] },
-  });
-  const sessionName = state.sessions.find(s => s.id === state.activeSessionId)?.nama || 'opname';
-  doc.save(`${state.currentDc.nama.replace(/\s+/g,'_')}_${sessionName.replace(/\s+/g,'_')}.pdf`);
-};
 
 // =========================================================
 // INIT — cek udah login apa belum
