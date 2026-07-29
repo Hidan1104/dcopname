@@ -689,6 +689,7 @@ function renderSessionList(){
         <div class="meta"><span>${formatTanggal(s.tanggal)}</span><span class="status-badge ${s.status}">${s.status}</span></div>
       </div>
       <div class="actions">
+        <button class="btn-icon" data-action="print" data-id="${s.id}" title="Print Counting Sheet"><i class="ti ti-printer"></i></button>
         <button class="btn-icon" data-action="rename" data-id="${s.id}" title="Edit sesi"><i class="ti ti-edit"></i></button>
         <button class="btn-icon" data-action="toggle" data-id="${s.id}" title="${s.status==='aktif' ? 'Tandai selesai' : 'Aktifkan lagi'}"><i class="ti ${s.status==='aktif' ? 'ti-check' : 'ti-refresh'}"></i></button>
         <button class="btn-icon danger" data-action="delete" data-id="${s.id}" title="Hapus sesi"><i class="ti ti-trash"></i></button>
@@ -706,6 +707,7 @@ function renderSessionList(){
       else if(action === 'rename') openSessionModal('edit', s);
       else if(action === 'toggle') toggleSessionStatus(id);
       else if(action === 'delete') openDeleteModal(s);
+      else if(action === 'print') printSessionPdf(id);
     };
   });
 }
@@ -863,6 +865,139 @@ async function toggleSessionStatus(id){
 
   await loadSessions(state.currentDc.id);
   renderSessionList();
+}
+
+// =========================================================
+// PRINT COUNTING SHEET (PDF) -- dari list sesi
+// =========================================================
+// Format ngikutin Format_Print_out.xlsx: kolom Scanner / Zona Number /
+// Squence / Nama Produk / Unit / Counting 2 / Counting 1.
+// Satu halaman A4 = satu sector, dicetak 2x (atas & bawah) biar bisa digunting.
+async function printSessionPdf(sessionId){
+  const session = state.sessions.find(x => x.id === sessionId);
+  if(!session) return;
+
+  const btn = document.querySelector(`[data-action="print"][data-id="${sessionId}"]`);
+  const originalIcon = btn ? btn.innerHTML : '';
+  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i>'; }
+
+  try {
+    const dcId = session.dc_id;
+
+    // 1. Semua zona di DC ini
+    const { data: zonesData, error: zonesErr } = await sb
+      .from('zones').select('id, nama, lantai').eq('dc_id', dcId).order('lantai').order('nama');
+    if(zonesErr) throw zonesErr;
+    const zoneIds = (zonesData || []).map(z => z.id);
+    if(!zoneIds.length){ alert('Belum ada zona yang terdaftar buat DC ini.'); return; }
+
+    // 2. Semua sector di zona-zona itu
+    const { data: sectorsData, error: sectorsErr } = await sb
+      .from('sectors').select('id, nama, zone_id').in('zone_id', zoneIds).order('nama');
+    if(sectorsErr) throw sectorsErr;
+    if(!sectorsData || !sectorsData.length){ alert('Belum ada sector yang terdaftar buat DC ini.'); return; }
+    const sectorIds = sectorsData.map(s => s.id);
+
+    // 3. Semua produk yang ke-assign ke sector-sector itu (via produk_sectors)
+    const { data: psData, error: psErr } = await sb
+      .from('produk_sectors')
+      .select('barcode, sector_id, master_produk(nama, satuan)')
+      .in('sector_id', sectorIds);
+    if(psErr) throw psErr;
+
+    // 4. Hasil scan (opname_entries) buat sesi ini, biar tau qty & siapa yang scan
+    const { data: entriesData, error: entriesErr } = await sb
+      .from('opname_entries')
+      .select('barcode, qty_fisik, updated_by, profiles(nama)')
+      .eq('session_id', sessionId);
+    if(entriesErr) throw entriesErr;
+
+    const entriesByBarcode = {};
+    (entriesData || []).forEach(e => { entriesByBarcode[e.barcode] = e; });
+
+    // Kelompokin produk per sector
+    const bySector = {};
+    (psData || []).forEach(ps => {
+      if(!bySector[ps.sector_id]) bySector[ps.sector_id] = [];
+      bySector[ps.sector_id].push(ps);
+    });
+
+    const sectorsWithProduk = sectorsData.filter(s => (bySector[s.id] || []).length);
+    if(!sectorsWithProduk.length){
+      alert('Belum ada produk yang ke-assign ke sector manapun (tabel produk_sectors) buat DC ini.');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageW = 210, pageH = 297;
+    const halfH = pageH / 2;
+    const header = ['Scanner', 'Sector', 'Sequence', 'Nama Produk', 'Unit', 'Counting 2', 'Counting 1'];
+    const dcNama = state.currentDc?.nama || '';
+
+    sectorsWithProduk.forEach((sector, idx) => {
+      if(idx > 0) doc.addPage();
+
+      const items = bySector[sector.id];
+      const rows = items.map((ps, i) => {
+        const e = entriesByBarcode[ps.barcode];
+        const scannerNama = getUpdatedByNama(e) || '-';
+        const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : '';
+        return [scannerNama, sector.nama, i + 1, ps.master_produk?.nama || '(produk tak dikenal)', ps.master_produk?.satuan || '', '', qty];
+      });
+
+      // Copy 1 -- separuh atas halaman
+      drawCountingSheetCopy(doc, 8, header, rows, dcNama, session, sector);
+
+      // Garis putus-putus di tengah halaman, buat panduan gunting
+      doc.setLineDashPattern([2, 1.5], 0);
+      doc.line(6, halfH, pageW - 6, halfH);
+      doc.setLineDashPattern([], 0);
+      doc.setFontSize(7);
+      doc.text('- - - - -  GUNTING DI SINI  - - - - -', pageW / 2, halfH - 1.5, { align: 'center' });
+
+      // Copy 2 -- separuh bawah halaman
+      drawCountingSheetCopy(doc, halfH + 8, header, rows, dcNama, session, sector);
+    });
+
+    const dcFileNama = dcNama.replace(/\s+/g, '_') || 'DC';
+    const sessionFileNama = (session.nama || 'sesi').replace(/\s+/g, '_');
+    doc.save(`CountingSheet_${dcFileNama}_${sessionFileNama}.pdf`);
+  } catch(err){
+    console.error('Gagal generate PDF counting sheet:', err);
+    alert('Gagal bikin PDF: ' + (err.message || err));
+  } finally {
+    if(btn){ btn.disabled = false; btn.innerHTML = originalIcon || '<i class="ti ti-printer"></i>'; }
+  }
+}
+
+// Gambar satu copy tabel counting sheet, mulai dari startY (dipake 2x per
+// halaman -- sekali buat separuh atas, sekali buat separuh bawah).
+function drawCountingSheetCopy(doc, startY, header, rows, dcNama, session, sector){
+  doc.setFontSize(14);
+  doc.setFont(undefined, 'bold');
+  doc.text(`${dcNama} · Sector ${sector.nama}`, 8, startY);
+  doc.setFont(undefined, 'normal');
+  doc.setFontSize(11);
+  doc.text(`Sesi: ${session.nama}  ·  Tanggal: ${formatTanggal(session.tanggal)}`, 8, startY + 6);
+
+  doc.autoTable({
+    head: [header],
+    body: rows,
+    startY: startY + 9,
+    margin: { left: 6, right: 6 },
+    styles: { fontSize: 11, cellPadding: 2.2, valign: 'middle' },
+    headStyles: { fillColor: [12,70,124], fontSize: 11.5 },
+    columnStyles: {
+      0: { cellWidth: 26 },
+      1: { cellWidth: 22, halign: 'center' },
+      2: { cellWidth: 25, halign: 'center' },
+      3: { cellWidth: 'auto' },
+      4: { cellWidth: 16, halign: 'center' },
+      5: { cellWidth: 29, halign: 'center' },
+      6: { cellWidth: 29, halign: 'center' },
+    },
+  });
 }
 
 function updateSessionNameLabels(){
