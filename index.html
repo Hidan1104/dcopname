@@ -1279,9 +1279,14 @@ async function openSessionReview(sessionId){
     // makanya harus liat sector_id di entry-nya masing-masing).
     const { data: entriesData, error: entriesErr } = await sb
       .from('opname_entries')
-      .select('id, barcode, sector_id, qty_fisik, master_produk(nama, satuan), sectors(nama)')
+      .select('id, barcode, sector_id, qty_fisik, master_produk(nama, satuan), sectors(nama), updated_at')
       .eq('session_id', sessionId)
-      .order('barcode');
+      // Diurutin ascending updated_at, bukan barcode -- soalnya kalau ada
+      // > 1 row buat barcode+sector yang sama (misal: scan ulang di waktu
+      // lain -- uploadEntries() di app insert row baru, bukan update yang
+      // lama), dedupe di bawah butuh row PALING BARU diproses terakhir
+      // biar itu yang menang overwrite.
+      .order('updated_at', { ascending: true });
     if(entriesErr) throw entriesErr;
 
     if(!entriesData || !entriesData.length){
@@ -1289,15 +1294,25 @@ async function openSessionReview(sessionId){
       return;
     }
 
-    state.reviewRows = entriesData.map(e => ({
-      entryId: e.id,
-      barcode: e.barcode,
-      sectorId: e.sector_id,
-      nama: e.master_produk?.nama || '(produk tak dikenal)',
-      satuan: e.master_produk?.satuan || '',
-      sectorNama: e.sectors?.nama || '-',
-      qtyCounting: e.qty_fisik ?? 0,
-    }));
+    // Dedupe per barcode+sector -- kalau gak di-dedupe, barcode yang
+    // ke-scan ulang bakal muncul 2x di tabel review DAN ke-double-count pas
+    // ditulis ke opname_final waktu sesi dikonfirmasi selesai.
+    const dedupedByKey = {};
+    entriesData.forEach(e => {
+      dedupedByKey[`${e.barcode}|${e.sector_id}`] = e;
+    });
+
+    state.reviewRows = Object.values(dedupedByKey)
+      .sort((a, b) => a.barcode.localeCompare(b.barcode))
+      .map(e => ({
+        entryId: e.id,
+        barcode: e.barcode,
+        sectorId: e.sector_id,
+        nama: e.master_produk?.nama || '(produk tak dikenal)',
+        satuan: e.master_produk?.satuan || '',
+        sectorNama: e.sectors?.nama || '-',
+        qtyCounting: e.qty_fisik ?? 0,
+      }));
 
     renderReviewTable();
   } catch(err){
@@ -1657,7 +1672,14 @@ async function loadEntries(){
   const { data, error } = await sb
     .from('opname_entries')
     .select('*, profiles(nama)')
-    .eq('session_id', state.activeSessionId);
+    .eq('session_id', state.activeSessionId)
+    // Diurutin ascending biar kalau ada lebih dari 1 row buat barcode+sector
+    // yang sama (misal: scan ulang di hari lain -- uploadEntries() di app
+    // insert row baru, bukan update yang lama), row yang PALING BARU selalu
+    // diproses terakhir dan menang di forEach overwrite di bawah. Tanpa ini,
+    // Postgres gak jamin urutan row tanpa ORDER BY, jadi row lama bisa
+    // "menang" overwrite dan qty baru gak kelihatan.
+    .order('updated_at', { ascending: true });
   if(error){
     console.error('Gagal muat opname_entries:', error);
     state.entries = {};
