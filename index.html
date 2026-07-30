@@ -69,6 +69,11 @@
     font-size:14px; background:var(--surface-0);
   }
   .field input:focus{ outline:2px solid var(--primary); outline-offset:1px; background:#fff; }
+  .field select{
+    width:100%; padding:11px 13px; border:1px solid var(--border); border-radius:9px;
+    font-size:14px; background:var(--surface-0);
+  }
+  .field select:focus{ outline:2px solid var(--primary); outline-offset:1px; background:#fff; }
   .btn-primary{
     width:100%; background:var(--primary); color:#fff; padding:12px; border-radius:9px;
     font-weight:600; font-size:14.5px; margin-top:6px;
@@ -548,22 +553,42 @@
   <div class="modal-card">
     <h2>Export Sesi</h2>
     <p class="modal-desc" id="exportModalDesc" style="margin-bottom:16px;"></p>
-    <button class="export-option" id="exportOptionPdf">
-      <span class="ico"><i class="ti ti-file-type-pdf"></i></span>
-      <span class="txt">
-        <span class="label">Counting 1 (PDF)</span>
-        <span class="desc">Lembar counting per sector, siap print & gunting</span>
-      </span>
-    </button>
-    <button class="export-option" id="exportOptionXlsx">
-      <span class="ico"><i class="ti ti-file-type-xls"></i></span>
-      <span class="txt">
-        <span class="label">SO Template (Excel)</span>
-        <span class="desc" id="exportOptionXlsxDesc">Qty final hasil otorisasi admin</span>
-      </span>
-    </button>
-    <div class="modal-actions">
-      <button class="btn-ghost" id="exportModalCancel">Batal</button>
+
+    <!-- Step 1: pilih jenis export -->
+    <div id="exportOptionsStep">
+      <button class="export-option" id="exportOptionPdf">
+        <span class="ico"><i class="ti ti-file-type-pdf"></i></span>
+        <span class="txt">
+          <span class="label">Counting 1 (PDF)</span>
+          <span class="desc">Lembar counting per sector, siap print & gunting</span>
+        </span>
+      </button>
+      <button class="export-option" id="exportOptionXlsx">
+        <span class="ico"><i class="ti ti-file-type-xls"></i></span>
+        <span class="txt">
+          <span class="label">SO Template (Excel)</span>
+          <span class="desc" id="exportOptionXlsxDesc">Qty final hasil otorisasi admin</span>
+        </span>
+      </button>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="exportModalCancel">Batal</button>
+      </div>
+    </div>
+
+    <!-- Step 2: pilih Zona -> Sector, khusus buat Counting 1 (PDF) -->
+    <div id="exportPdfStep" class="hidden">
+      <div class="field">
+        <label>Zona</label>
+        <select id="exportZonaSelect"></select>
+      </div>
+      <div class="field" style="margin-bottom:0;">
+        <label>Sector</label>
+        <select id="exportSectorSelect"></select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-ghost" id="exportPdfBack">Kembali</button>
+        <button class="btn-amber" id="exportPdfConfirm">Cetak PDF</button>
+      </div>
     </div>
   </div>
 </div>
@@ -954,6 +979,7 @@ function openExportModal(session){
     ? 'Qty final hasil otorisasi admin'
     : 'Tersedia setelah sesi ditandai Selesai';
 
+  showExportOptionsStep();
   show('exportModal');
 }
 
@@ -962,16 +988,97 @@ function closeExportModal(){
   state.exportingSession = null;
 }
 
+function showExportOptionsStep(){
+  show('exportOptionsStep');
+  hide('exportPdfStep');
+}
+
+function showExportPdfStep(){
+  hide('exportOptionsStep');
+  show('exportPdfStep');
+}
+
 el('exportModalCancel').onclick = closeExportModal;
 el('exportModal').addEventListener('click', e => {
   if(e.target.id === 'exportModal') closeExportModal();
 });
 
-el('exportOptionPdf').onclick = () => {
+// Counting 1 (PDF) sekarang minta pilih Zona dulu, baru Sector, sebelum
+// PDF-nya digenerate -- soalnya satu DC bisa punya banyak zona/sector dan
+// biasanya yang mau dicetak cuma satu sector aja per print.
+el('exportOptionPdf').onclick = async () => {
   if(!state.exportingSession) return;
+  const dcId = state.exportingSession.dc_id;
+
+  const zonaSelect = el('exportZonaSelect');
+  const sectorSelect = el('exportSectorSelect');
+  zonaSelect.innerHTML = '<option value="">Memuat zona...</option>';
+  sectorSelect.innerHTML = '<option value="">-</option>';
+  showExportPdfStep();
+
+  const { data: zonesData, error } = await sb
+    .from('zones').select('id, nama').eq('dc_id', dcId).order('nama');
+
+  if(error){
+    alert('Gagal muat daftar zona: ' + error.message);
+    showExportOptionsStep();
+    return;
+  }
+  if(!zonesData || !zonesData.length){
+    alert('Belum ada zona yang terdaftar buat DC ini.');
+    showExportOptionsStep();
+    return;
+  }
+
+  zonaSelect.innerHTML = zonesData.map(z => `<option value="${z.id}">${z.nama}</option>`).join('');
+  await loadSectorOptionsForExport(zonaSelect.value);
+};
+
+el('exportZonaSelect').addEventListener('change', (e) => {
+  loadSectorOptionsForExport(e.target.value);
+});
+
+// Isi dropdown Sector berdasarkan Zona yang lagi dipilih di step PDF.
+async function loadSectorOptionsForExport(zonaId){
+  const sectorSelect = el('exportSectorSelect');
+  if(!zonaId){
+    sectorSelect.innerHTML = '<option value="">-</option>';
+    return;
+  }
+  sectorSelect.innerHTML = '<option value="">Memuat sector...</option>';
+
+  const { data, error } = await sb
+    .from('sectors').select('id, nama').eq('zone_id', zonaId).order('nama');
+
+  if(error){
+    sectorSelect.innerHTML = '<option value="">Gagal muat sector</option>';
+    return;
+  }
+  if(!data || !data.length){
+    sectorSelect.innerHTML = '<option value="">Belum ada sector di zona ini</option>';
+    return;
+  }
+  sectorSelect.innerHTML = data.map(s => `<option value="${s.id}">${s.nama}</option>`).join('');
+}
+
+el('exportPdfBack').onclick = showExportOptionsStep;
+
+el('exportPdfConfirm').onclick = async () => {
+  if(!state.exportingSession) return;
+  const sectorId = el('exportSectorSelect').value;
+  if(!sectorId){ alert('Pilih sector dulu.'); return; }
+
   const sessionId = state.exportingSession.id;
+  const btn = el('exportPdfConfirm');
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Membuat PDF...';
+
+  await printSessionPdf(sessionId, sectorId);
+
+  btn.disabled = false;
+  btn.textContent = originalLabel;
   closeExportModal();
-  printSessionPdf(sessionId);
 };
 
 el('exportOptionXlsx').onclick = () => {
@@ -1298,63 +1405,44 @@ el('confirmReviewBtn').onclick = async () => {
 // =========================================================
 // Format ngikutin Format_Print_out.xlsx: kolom Scanner / Zona Number /
 // Squence / Nama Produk / Unit / Counting 2 / Counting 1.
-// Satu halaman A4 = satu sector, dicetak 2x (atas & bawah) biar bisa digunting.
-async function printSessionPdf(sessionId){
+// Sekarang di-scope ke SATU sector aja (dipilih user lewat Zona -> Sector
+// di modal export), bukan semua sector se-DC sekaligus.
+// Satu halaman A4 = sector itu, dicetak 2x (atas & bawah) biar bisa digunting.
+async function printSessionPdf(sessionId, sectorId){
   const session = state.sessions.find(x => x.id === sessionId);
   if(!session) return;
-
-  const btn = document.querySelector(`[data-action="print"][data-id="${sessionId}"]`);
-  const originalIcon = btn ? btn.innerHTML : '';
-  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader-2"></i>'; }
+  if(!sectorId){ alert('Pilih sector dulu.'); return; }
 
   try {
-    const dcId = session.dc_id;
+    // 1. Detail sector yang dipilih
+    const { data: sectorRow, error: sectorErr } = await sb
+      .from('sectors').select('id, nama, zone_id').eq('id', sectorId).maybeSingle();
+    if(sectorErr) throw sectorErr;
+    if(!sectorRow){ alert('Sector gak ketemu.'); return; }
 
-    // 1. Semua zona di DC ini
-    const { data: zonesData, error: zonesErr } = await sb
-      .from('zones').select('id, nama').eq('dc_id', dcId).order('nama');
-    if(zonesErr) throw zonesErr;
-    const zoneIds = (zonesData || []).map(z => z.id);
-    if(!zoneIds.length){ alert('Belum ada zona yang terdaftar buat DC ini.'); return; }
-
-    // 2. Semua sector di zona-zona itu
-    const { data: sectorsData, error: sectorsErr } = await sb
-      .from('sectors').select('id, nama, zone_id').in('zone_id', zoneIds).order('nama');
-    if(sectorsErr) throw sectorsErr;
-    if(!sectorsData || !sectorsData.length){ alert('Belum ada sector yang terdaftar buat DC ini.'); return; }
-    const sectorIds = sectorsData.map(s => s.id);
-
-    // 3. Semua produk yang ke-assign ke sector-sector itu (via produk_sectors)
+    // 2. Semua produk yang ke-assign ke sector ini (via produk_sectors)
     const { data: psData, error: psErr } = await sb
       .from('produk_sectors')
       .select('barcode, sector_id, master_produk(nama, satuan)')
-      .in('sector_id', sectorIds);
+      .eq('sector_id', sectorId);
     if(psErr) throw psErr;
+    if(!psData || !psData.length){
+      alert('Belum ada produk yang ke-assign ke sector ini (tabel produk_sectors).');
+      return;
+    }
 
-    // 4. Hasil scan (opname_entries) buat sesi ini, biar tau qty & siapa yang scan
+    // 3. Hasil scan (opname_entries) buat sesi + sector ini, biar tau qty & siapa yang scan
     const { data: entriesData, error: entriesErr } = await sb
       .from('opname_entries')
       .select('barcode, sector_id, qty_fisik, updated_by, profiles(nama)')
-      .eq('session_id', sessionId);
+      .eq('session_id', sessionId)
+      .eq('sector_id', sectorId);
     if(entriesErr) throw entriesErr;
 
     // Key gabungan barcode+sector_id -- barcode yang sama bisa punya qty
     // beda-beda di tiap sector, jadi gak bisa di-key barcode doang.
     const entriesByKey = {};
     (entriesData || []).forEach(e => { entriesByKey[`${e.barcode}|${e.sector_id}`] = e; });
-
-    // Kelompokin produk per sector
-    const bySector = {};
-    (psData || []).forEach(ps => {
-      if(!bySector[ps.sector_id]) bySector[ps.sector_id] = [];
-      bySector[ps.sector_id].push(ps);
-    });
-
-    const sectorsWithProduk = sectorsData.filter(s => (bySector[s.id] || []).length);
-    if(!sectorsWithProduk.length){
-      alert('Belum ada produk yang ke-assign ke sector manapun (tabel produk_sectors) buat DC ini.');
-      return;
-    }
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -1363,39 +1451,33 @@ async function printSessionPdf(sessionId){
     const header = ['Scanner', 'Sector', 'Sequence', 'Nama Produk', 'Unit', 'Counting 2', 'Counting 1'];
     const dcNama = state.currentDc?.nama || '';
 
-    sectorsWithProduk.forEach((sector, idx) => {
-      if(idx > 0) doc.addPage();
-
-      const items = bySector[sector.id];
-      const rows = items.map((ps, i) => {
-        const e = entriesByKey[`${ps.barcode}|${sector.id}`];
-        const scannerNama = getUpdatedByNama(e) || '-';
-        const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : '';
-        return [scannerNama, sector.nama, i + 1, ps.master_produk?.nama || '(produk tak dikenal)', ps.master_produk?.satuan || '', '', qty];
-      });
-
-      // Copy 1 -- separuh atas halaman
-      drawCountingSheetCopy(doc, 8, header, rows, dcNama, session, sector);
-
-      // Garis putus-putus di tengah halaman, buat panduan gunting
-      doc.setLineDashPattern([2, 1.5], 0);
-      doc.line(6, halfH, pageW - 6, halfH);
-      doc.setLineDashPattern([], 0);
-      doc.setFontSize(7);
-      doc.text('- - - - -  GUNTING DI SINI  - - - - -', pageW / 2, halfH - 1.5, { align: 'center' });
-
-      // Copy 2 -- separuh bawah halaman
-      drawCountingSheetCopy(doc, halfH + 8, header, rows, dcNama, session, sector);
+    const rows = psData.map((ps, i) => {
+      const e = entriesByKey[`${ps.barcode}|${sectorId}`];
+      const scannerNama = getUpdatedByNama(e) || '-';
+      const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : '';
+      return [scannerNama, sectorRow.nama, i + 1, ps.master_produk?.nama || '(produk tak dikenal)', ps.master_produk?.satuan || '', '', qty];
     });
+
+    // Copy 1 -- separuh atas halaman
+    drawCountingSheetCopy(doc, 8, header, rows, dcNama, session, sectorRow);
+
+    // Garis putus-putus di tengah halaman, buat panduan gunting
+    doc.setLineDashPattern([2, 1.5], 0);
+    doc.line(6, halfH, pageW - 6, halfH);
+    doc.setLineDashPattern([], 0);
+    doc.setFontSize(7);
+    doc.text('- - - - -  GUNTING DI SINI  - - - - -', pageW / 2, halfH - 1.5, { align: 'center' });
+
+    // Copy 2 -- separuh bawah halaman
+    drawCountingSheetCopy(doc, halfH + 8, header, rows, dcNama, session, sectorRow);
 
     const dcFileNama = dcNama.replace(/\s+/g, '_') || 'DC';
     const sessionFileNama = (session.nama || 'sesi').replace(/\s+/g, '_');
-    doc.save(`CountingSheet_${dcFileNama}_${sessionFileNama}.pdf`);
+    const sectorFileNama = (sectorRow.nama || 'sector').replace(/\s+/g, '_');
+    doc.save(`CountingSheet_${dcFileNama}_${sessionFileNama}_${sectorFileNama}.pdf`);
   } catch(err){
     console.error('Gagal generate PDF counting sheet:', err);
     alert('Gagal bikin PDF: ' + (err.message || err));
-  } finally {
-    if(btn){ btn.disabled = false; btn.innerHTML = originalIcon || '<i class="ti ti-printer"></i>'; }
   }
 }
 
