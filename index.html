@@ -471,6 +471,7 @@
     <button class="back-btn" id="backToSelectorBtn"><i class="ti ti-arrow-left"></i> Sesi lain</button>
     <div class="brand" id="zonaDcName"></div>
     <div class="topbar-right">
+      <button class="btn-ghost" id="switchViewFromZonaBtn"><i class="ti ti-layout-grid"></i> Semua Item</button>
       <span class="user-chip" id="userChip2"></span>
       <button class="btn-ghost" id="logoutBtn3">Logout</button>
     </div>
@@ -489,6 +490,7 @@
     <button class="back-btn" id="backBtn"><i class="ti ti-arrow-left"></i> Zona lain</button>
     <div class="brand" id="dashDcName"></div>
     <div class="topbar-right">
+      <button class="btn-ghost" id="switchViewBtn"><i class="ti ti-layout-grid"></i> Semua Item</button>
       <span class="sync-dot off" id="syncDot"><span class="dot"></span><span id="syncText">bentar</span></span>
       <button class="btn-ghost" id="logoutBtn2">Logout</button>
     </div>
@@ -618,6 +620,7 @@ let state = {
   zonesList: [],
   sectorsList: [],
   sectorFilter: '',
+  viewAllDc: false, // false = lihat per Zona, true = lihat semua item se-DC
   currentZonaId: null,
   profilesById: {},
   activeSessionId: null,
@@ -781,6 +784,7 @@ function renderSelector(){
 
 el('backBtn').onclick = () => {
   if(state.realtimeChannel){ sb.removeChannel(state.realtimeChannel); state.realtimeChannel = null; }
+  state.viewAllDc = false;
   hide('dashboardScreen');
   show('zonaScreen');
 };
@@ -1302,16 +1306,35 @@ async function openSessionReview(sessionId){
       dedupedByKey[`${e.barcode}|${e.sector_id}`] = e;
     });
 
-    state.reviewRows = Object.values(dedupedByKey)
+    // Agregasi lanjut per barcode -- kalau produk yang sama ke-assign ke
+    // beberapa sector (misal ke-scan di A01 & A02), qty-nya DIJUMLAHIN jadi
+    // satu baris per produk. opname_final sendiri emang gak nyimpen sector_id,
+    // jadi lebih benar diagregasi dari sini (bukan nunggu pas export doang).
+    const aggByBarcode = {};
+    Object.values(dedupedByKey).forEach(e => {
+      if(!aggByBarcode[e.barcode]){
+        aggByBarcode[e.barcode] = {
+          barcode: e.barcode,
+          nama: e.master_produk?.nama || '(produk tak dikenal)',
+          satuan: e.master_produk?.satuan || '',
+          sectorNamas: [],
+          qtyCounting: 0,
+        };
+      }
+      const agg = aggByBarcode[e.barcode];
+      const sectorNama = e.sectors?.nama || '-';
+      if(!agg.sectorNamas.includes(sectorNama)) agg.sectorNamas.push(sectorNama);
+      agg.qtyCounting += Number(e.qty_fisik) || 0;
+    });
+
+    state.reviewRows = Object.values(aggByBarcode)
       .sort((a, b) => a.barcode.localeCompare(b.barcode))
-      .map(e => ({
-        entryId: e.id,
-        barcode: e.barcode,
-        sectorId: e.sector_id,
-        nama: e.master_produk?.nama || '(produk tak dikenal)',
-        satuan: e.master_produk?.satuan || '',
-        sectorNama: e.sectors?.nama || '-',
-        qtyCounting: e.qty_fisik ?? 0,
+      .map(agg => ({
+        barcode: agg.barcode,
+        nama: agg.nama,
+        satuan: agg.satuan,
+        sectorNama: agg.sectorNamas.join(', '),
+        qtyCounting: agg.qtyCounting,
       }));
 
     renderReviewTable();
@@ -1589,8 +1612,11 @@ async function openZona(zonaId){
   state.currentZonaId = zonaId;
   state.currentZona = zona ? zona.nama : '';
   state.sectorFilter = '';
+  state.viewAllDc = false;
 
   el('dashDcName').innerHTML = `<div class="mark"><i class="ti ${state.currentDc.icon||'ti-box'}"></i></div>${state.currentDc.nama} · Zona ${state.currentZona}`;
+  el('backBtn').innerHTML = '<i class="ti ti-arrow-left"></i> Zona lain';
+  el('switchViewBtn').innerHTML = '<i class="ti ti-layout-grid"></i> Semua Item';
   el('searchInput').value = '';
   state.searchQuery = '';
 
@@ -1604,6 +1630,45 @@ async function openZona(zonaId){
   subscribeRealtime();
   setSync(true, 'tersambung');
 }
+
+// Mode "Semua Item" -- nampilin semua produk se-DC B, ngelewatin batasan
+// per-zona. Dipake buat lihat gambaran lengkap tanpa perlu gonta-ganti zona.
+async function switchToAllDcView(){
+  state.viewAllDc = true;
+  state.currentZonaId = null;
+  state.currentZona = '';
+  state.sectorFilter = '';
+
+  el('dashDcName').innerHTML = `<div class="mark"><i class="ti ${state.currentDc.icon||'ti-box'}"></i></div>${state.currentDc.nama} · Semua Item`;
+  el('backBtn').innerHTML = '<i class="ti ti-arrow-left"></i> Pilih Zona';
+  el('switchViewBtn').innerHTML = '<i class="ti ti-map-2"></i> Per Zona';
+  el('searchInput').value = '';
+  state.searchQuery = '';
+
+  hide('zonaScreen');
+  show('dashboardScreen');
+  setSync(false, 'memuat...');
+
+  await loadProdukForDc(state.currentDc.id);
+  renderSectorFilterOptions();
+  renderDashboard();
+  subscribeRealtime();
+  setSync(true, 'tersambung');
+}
+
+el('switchViewFromZonaBtn').onclick = () => switchToAllDcView();
+
+el('switchViewBtn').onclick = () => {
+  if(state.viewAllDc){
+    // Balik ke tampilan pilih Zona
+    if(state.realtimeChannel){ sb.removeChannel(state.realtimeChannel); state.realtimeChannel = null; }
+    state.viewAllDc = false;
+    hide('dashboardScreen');
+    show('zonaScreen');
+  } else {
+    switchToAllDcView();
+  }
+};
 
 // =========================================================
 // DASHBOARD
@@ -1652,6 +1717,76 @@ async function loadProdukForZona(zonaId){
       sector_nama: sector ? sector.nama : '-',
     };
   });
+}
+
+// Sama kaya loadProdukForZona, tapi scope-nya SATU DC PENUH -- semua zona,
+// semua sector, semua produk yang ke-assign. Dipake buat mode "Semua Item".
+async function loadProdukForDc(dcId){
+  const { data: zonesData, error: zonesErr } = await sb
+    .from('zones').select('id').eq('dc_id', dcId);
+  if(zonesErr){
+    console.error('Gagal muat zones:', zonesErr);
+    state.sectorsList = [];
+    state.produkList = [];
+    return;
+  }
+  const zoneIds = (zonesData || []).map(z => z.id);
+  if(!zoneIds.length){
+    state.sectorsList = [];
+    state.produkList = [];
+    return;
+  }
+
+  const { data: sectorsData, error: sectorsErr } = await sb
+    .from('sectors').select('*').in('zone_id', zoneIds).order('nama');
+  if(sectorsErr){
+    console.error('Gagal muat sectors:', sectorsErr);
+    state.sectorsList = [];
+    state.produkList = [];
+    return;
+  }
+  state.sectorsList = sectorsData || [];
+
+  const sectorIds = state.sectorsList.map(s => s.id);
+  if(!sectorIds.length){
+    state.produkList = [];
+    return;
+  }
+
+  const { data: psData, error: psErr } = await sb
+    .from('produk_sectors')
+    .select('id, sector_id, barcode, master_produk(nama, kode_produk, kategori, sub_kategori, satuan)')
+    .in('sector_id', sectorIds);
+  if(psErr){
+    console.error('Gagal muat produk_sectors:', psErr);
+    state.produkList = [];
+    return;
+  }
+
+  state.produkList = (psData || []).map(ps => {
+    const sector = state.sectorsList.find(s => s.id === ps.sector_id);
+    return {
+      id: ps.id,
+      barcode: ps.barcode,
+      nama: ps.master_produk?.nama || '(produk tak dikenal)',
+      kode_produk: ps.master_produk?.kode_produk || '',
+      kategori: ps.master_produk?.kategori || '',
+      sub_kategori: ps.master_produk?.sub_kategori || '',
+      satuan: ps.master_produk?.satuan || '',
+      sector_id: ps.sector_id,
+      sector_nama: sector ? sector.nama : '-',
+    };
+  });
+}
+
+// Muat ulang produkList sesuai mode yang lagi aktif (per-Zona atau Semua Item).
+// Dipake di realtime subscription biar gak hardcode ke salah satu mode aja.
+async function reloadProdukList(){
+  if(state.viewAllDc){
+    await loadProdukForDc(state.currentDc.id);
+  } else {
+    await loadProdukForZona(state.currentZonaId);
+  }
 }
 
 function renderSectorFilterOptions(){
@@ -1781,16 +1916,22 @@ function setSync(ok, text){
 
 function subscribeRealtime(){
   if(state.realtimeChannel) sb.removeChannel(state.realtimeChannel);
-  state.realtimeChannel = sb.channel('inventory-sync-' + state.currentZonaId)
+  const channelKey = state.viewAllDc
+    ? ('inventory-sync-alldc-' + state.currentDc.id)
+    : ('inventory-sync-' + state.currentZonaId);
+  state.realtimeChannel = sb.channel(channelKey)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'opname_entries' }, async payload => {
       const row = payload.new || payload.old;
       if(!row || row.session_id !== state.activeSessionId) return;
       if(payload.eventType === 'DELETE'){
         delete state.entries[`${row.barcode}|${row.sector_id}`];
       } else {
-        // Payload realtime gak bawa hasil join ke profiles, jadi kalau namanya
-        // belum ke-cache, ambil dulu biar 'discan oleh' langsung tampil nama.
-        if(row.updated_by && !state.profilesById[row.updated_by]){
+        // Payload realtime gak bawa hasil join ke profiles, jadi tiap event
+        // masuk kita tarik ulang namanya langsung -- SENGAJA gak di-skip
+        // walau id-nya udah pernah ke-cache, soalnya kalau ada rename nama
+        // di tabel profiles, cache lama bakal nyangkut & nampilin nama basi
+        // selama tab browser gak di-refresh.
+        if(row.updated_by){
           const { data: profileData } = await sb.from('profiles').select('nama').eq('id', row.updated_by).single();
           if(profileData?.nama) state.profilesById[row.updated_by] = profileData.nama;
         }
@@ -1802,16 +1943,16 @@ function subscribeRealtime(){
       const row = payload.new || payload.old;
       const sectorIds = state.sectorsList.map(s => s.id);
       if(!row || !sectorIds.includes(row.sector_id)) return;
-      // Sesuatu berubah di produk_sectors buat zona ini -- muat ulang biar
-      // konsisten (nambah/hapus produk dari sector, dll).
-      await loadProdukForZona(state.currentZonaId);
+      // Sesuatu berubah di produk_sectors buat scope yang lagi aktif -- muat
+      // ulang biar konsisten (nambah/hapus produk dari sector, dll).
+      await reloadProdukList();
       renderSectorFilterOptions();
       renderDashboard();
     })
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'master_produk' }, async payload => {
       const barcode = payload.new?.barcode;
       if(!barcode || !state.produkList.some(p => p.barcode === barcode)) return;
-      await loadProdukForZona(state.currentZonaId);
+      await reloadProdukList();
       renderDashboard();
     })
     .subscribe(status => {
