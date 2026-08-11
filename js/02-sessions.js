@@ -13,6 +13,7 @@ async function loadDcs(){
 
 function renderSelector(){
   el('userChip').innerHTML = `<i class="ti ti-user-circle"></i> ${state.profile?.nama || state.session?.user?.email || 'User'} ${state.profile?.admin === 'admin' ? '· Admin' : ''}`;
+  el('addDcBtn').classList.toggle('hidden', state.profile?.admin !== 'admin');
 
   let dcsToShow = state.dcs;
   if(state.profile?.admin !== 'admin'){
@@ -226,4 +227,55 @@ el('deleteModalCancel').onclick = closeDeleteModal;
 el('deleteModal').addEventListener('click', e => {
   if(e.target.id === 'deleteModal') closeDeleteModal();
 });
+
+// =========================================================
+// MODAL: DC BARU (admin doang)
+// =========================================================
+el('addDcBtn').onclick = () => {
+  el('dcModalId').value = '';
+  el('dcModalNama').value = '';
+  el('dcModalSub').value = '';
+  el('dcModalIcon').value = '';
+  el('dcModalSave').disabled = false;
+  el('dcModalSave').textContent = 'Simpan';
+  show('dcModal');
+  el('dcModalId').focus();
+};
+
+function closeDcModal(){ hide('dcModal'); }
+el('dcModalCancel').onclick = closeDcModal;
+el('dcModal').addEventListener('click', e => {
+  if(e.target.id === 'dcModal') closeDcModal();
+});
+
+el('dcModalSave').onclick = async () => {
+  const id = el('dcModalId').value.trim();
+  const nama = el('dcModalNama').value.trim();
+  const sub = el('dcModalSub').value.trim();
+  const icon = el('dcModalIcon').value.trim();
+
+  if(!id){ alert('ID DC wajib diisi.'); return; }
+  if(!nama){ alert('Nama DC wajib diisi.'); return; }
+
+  el('dcModalSave').disabled = true;
+  el('dcModalSave').textContent = 'Menyimpan...';
+
+  const { error } = await sb.from('dcs').insert({
+    id, nama,
+    sub: sub || null,
+    icon: icon || null,
+    urutan: state.dcs.length + 1,
+  });
+
+  if(error){
+    alert('Gagal bikin DC: ' + error.message);
+    el('dcModalSave').disabled = false;
+    el('dcModalSave').textContent = 'Simpan';
+    return;
+  }
+
+  await loadDcs();
+  renderSelector();
+  closeDcModal();
+};
 

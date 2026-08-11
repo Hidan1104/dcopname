@@ -45,8 +45,13 @@
     </div>
   </div>
   <div class="wrap">
-    <h1>Pilih Distribution Center</h1>
-    <p class="hint" id="selectorHint">Pilih DC untuk melihat Zona</p>
+    <div class="session-list-head">
+      <div>
+        <h1>Pilih Distribution Center</h1>
+        <p class="hint" id="selectorHint">Pilih DC untuk melihat Zona</p>
+      </div>
+      <button class="btn-amber hidden" id="addDcBtn"><i class="ti ti-plus"></i> DC Baru</button>
+    </div>
     <div class="dc-grid" id="dcGrid"></div>
   </div>
 </div>
@@ -127,8 +132,13 @@
     </div>
   </div>
   <div class="wrap">
-    <h1>Pilih Zona</h1>
-    <p class="hint">Pilih Zona untuk melihat produk di area itu · <span class="session-name-label" id="zonaSessionLabel"></span></p>
+    <div class="session-list-head">
+      <div>
+        <h1>Pilih Zona</h1>
+        <p class="hint">Pilih Zona untuk melihat produk di area itu · <span class="session-name-label" id="zonaSessionLabel"></span></p>
+      </div>
+      <button class="btn-amber hidden" id="addZonaBtn"><i class="ti ti-plus"></i> Zona Baru</button>
+    </div>
     <div class="zona-picker-grid" id="zonaGrid"></div>
     <div class="empty-state hidden" id="emptyZonaListMsg"><p>Belum ada zona yang terdaftar buat DC ini.</p></div>
   </div>
@@ -170,6 +180,10 @@
           <option value="">Semua Sector</option>
         </select>
       </div>
+    </div>
+    <div class="admin-actions hidden" id="adminActions">
+      <button class="btn-ghost" id="addSectorBtn"><i class="ti ti-plus"></i> Sector Baru</button>
+      <button class="btn-ghost" id="addProdukBtn"><i class="ti ti-plus"></i> Produk Baru</button>
     </div>
     <div class="produk-grid" id="produkGrid"></div>
     <div class="empty-state hidden" id="noSessionMsg">
@@ -256,6 +270,112 @@
         <button class="btn-ghost" id="exportPdfBack">Kembali</button>
         <button class="btn-amber" id="exportPdfConfirm">Cetak PDF</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: DC BARU (admin) ============ -->
+<div id="dcModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h2>DC Baru</h2>
+    <div class="field">
+      <label>ID (unik, huruf kecil, cth: dc-c)</label>
+      <input type="text" id="dcModalId" placeholder="dc-c">
+    </div>
+    <div class="field">
+      <label>Nama</label>
+      <input type="text" id="dcModalNama" placeholder="cth: DC C">
+    </div>
+    <div class="field">
+      <label>Sub-judul (opsional)</label>
+      <input type="text" id="dcModalSub" placeholder="cth: Jakarta Timur">
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>Icon Tabler (opsional)</label>
+      <input type="text" id="dcModalIcon" placeholder="ti-building-warehouse">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="dcModalCancel">Batal</button>
+      <button class="btn-amber" id="dcModalSave">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: ZONA BARU (admin) ============ -->
+<div id="zoneModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h2>Zona Baru</h2>
+    <div class="field">
+      <label>ID (unik, cth: dc-b-p)</label>
+      <input type="text" id="zoneModalId" placeholder="dc-b-p">
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>Nama</label>
+      <input type="text" id="zoneModalNama" placeholder="cth: P">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="zoneModalCancel">Batal</button>
+      <button class="btn-amber" id="zoneModalSave">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: SECTOR BARU (admin) ============ -->
+<div id="sectorModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h2>Sector Baru</h2>
+    <p class="modal-desc" id="sectorModalZonaInfo" style="margin-bottom:16px;"></p>
+    <div class="field">
+      <label>ID (unik, cth: dc-b-p-001)</label>
+      <input type="text" id="sectorModalId" placeholder="dc-b-p-001">
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>Nama</label>
+      <input type="text" id="sectorModalNama" placeholder="cth: P001">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="sectorModalCancel">Batal</button>
+      <button class="btn-amber" id="sectorModalSave">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: PRODUK BARU (admin) ============ -->
+<div id="produkModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h2>Produk Baru</h2>
+    <p class="modal-desc" style="margin-bottom:16px;">Bikin produk baru (atau assign produk yang udah ada) ke sebuah sector.</p>
+    <div class="field">
+      <label>Barcode</label>
+      <input type="text" id="produkModalBarcode" placeholder="cth: B290720260099">
+    </div>
+    <div class="field">
+      <label>Nama Produk <span style="font-weight:400;color:var(--muted);">(kosongin kalau barcode udah ada)</span></label>
+      <input type="text" id="produkModalNama" placeholder="cth: Sambal Bawang Sachet">
+    </div>
+    <div class="field">
+      <label>Kode Produk (opsional)</label>
+      <input type="text" id="produkModalKode" placeholder="cth: A011099">
+    </div>
+    <div class="field">
+      <label>Kategori (opsional)</label>
+      <input type="text" id="produkModalKategori" placeholder="cth: FOOD">
+    </div>
+    <div class="field">
+      <label>Sub Kategori (opsional)</label>
+      <input type="text" id="produkModalSubKategori" placeholder="cth: Bumbu">
+    </div>
+    <div class="field">
+      <label>Satuan (opsional)</label>
+      <input type="text" id="produkModalSatuan" placeholder="cth: pack">
+    </div>
+    <div class="field" style="margin-bottom:0;">
+      <label>Assign ke Sector</label>
+      <select id="produkModalSector"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="produkModalCancel">Batal</button>
+      <button class="btn-amber" id="produkModalSave">Simpan</button>
     </div>
   </div>
 </div>
