@@ -137,7 +137,6 @@
         <h1>Pilih Zona</h1>
         <p class="hint">Pilih Zona untuk melihat produk di area itu · <span class="session-name-label" id="zonaSessionLabel"></span></p>
       </div>
-      <button class="btn-amber hidden" id="addZonaBtn"><i class="ti ti-plus"></i> Zona Baru</button>
     </div>
     <div class="zona-picker-grid" id="zonaGrid"></div>
     <div class="empty-state hidden" id="emptyZonaListMsg"><p>Belum ada zona yang terdaftar buat DC ini.</p></div>
@@ -180,10 +179,6 @@
           <option value="">Semua Sector</option>
         </select>
       </div>
-    </div>
-    <div class="admin-actions hidden" id="adminActions">
-      <button class="btn-ghost" id="addSectorBtn"><i class="ti ti-plus"></i> Sector Baru</button>
-      <button class="btn-ghost" id="addProdukBtn"><i class="ti ti-plus"></i> Produk Baru</button>
     </div>
     <div class="produk-grid" id="produkGrid"></div>
     <div class="empty-state hidden" id="noSessionMsg">
@@ -270,6 +265,65 @@
         <button class="btn-ghost" id="exportPdfBack">Kembali</button>
         <button class="btn-amber" id="exportPdfConfirm">Cetak PDF</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ KELOLA DATA: PILIH ZONA (admin, lepas dari sesi) ============ -->
+<div id="manageZonaScreen" class="hidden">
+  <div class="topbar">
+    <button class="back-btn" id="backFromManageZonaBtn"><i class="ti ti-arrow-left"></i> DC lain</button>
+    <div class="brand" id="manageZonaDcName"></div>
+    <div class="topbar-right">
+      <span class="user-chip" id="userChip7"></span>
+      <button class="btn-ghost" id="logoutBtn6">Logout</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="session-list-head">
+      <div>
+        <h1>Kelola Data — Pilih Zona</h1>
+        <p class="hint">Tambah/liat Zona, Sector, dan Produk buat DC ini — lepas dari sesi opname manapun.</p>
+      </div>
+      <button class="btn-amber" id="addZonaBtn"><i class="ti ti-plus"></i> Zona Baru</button>
+    </div>
+    <div class="zona-picker-grid" id="manageZonaGrid"></div>
+    <div class="empty-state hidden" id="emptyManageZonaMsg"><p>Belum ada zona yang terdaftar buat DC ini.<br>Klik "Zona Baru" buat mulai.</p></div>
+  </div>
+</div>
+
+<!-- ============ KELOLA DATA: SECTOR & PRODUK (admin, lepas dari sesi) ============ -->
+<div id="manageProdukScreen" class="hidden">
+  <div class="topbar">
+    <button class="back-btn" id="backFromManageProdukBtn"><i class="ti ti-arrow-left"></i> Zona lain</button>
+    <div class="brand" id="manageProdukZonaName"></div>
+    <div class="topbar-right">
+      <span class="user-chip" id="userChip8"></span>
+      <button class="btn-ghost" id="logoutBtn7">Logout</button>
+    </div>
+  </div>
+  <div class="dash-content">
+    <div class="produk-toolbar">
+      <div class="produk-toolbar-heading">
+        <h1 style="font-size:19px;font-weight:600;margin:0;">Sector &amp; Produk</h1>
+      </div>
+      <div class="produk-toolbar-search">
+        <div class="search-box">
+          <i class="ti ti-search"></i>
+          <input type="text" id="manageSearchInput" placeholder="Cari produk...">
+        </div>
+        <select id="manageSectorFilterSelect" class="sector-filter">
+          <option value="">Semua Sector</option>
+        </select>
+      </div>
+    </div>
+    <div class="admin-actions" id="manageAdminActions">
+      <button class="btn-ghost" id="addSectorBtn"><i class="ti ti-plus"></i> Sector Baru</button>
+      <button class="btn-ghost" id="addProdukBtn"><i class="ti ti-plus"></i> Produk Baru</button>
+    </div>
+    <div class="produk-grid" id="manageProdukGrid"></div>
+    <div class="empty-state hidden" id="emptyManageProdukMsg">
+      <p>Belum ada produk yang ke-assign ke sector di zona ini.</p>
     </div>
   </div>
 </div>
@@ -387,6 +441,7 @@
 <script src="js/04-session-review.js"></script>
 <script src="js/05-print.js"></script>
 <script src="js/06-dashboard.js"></script>
+<script src="js/08-manage-data.js"></script>
 <script src="js/07-init.js"></script>
 </body>
 </html>

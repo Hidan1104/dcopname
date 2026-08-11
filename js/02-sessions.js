@@ -22,19 +22,30 @@ function renderSelector(){
   }
 
   el('dcGrid').innerHTML = dcsToShow.map(dc => `
-    <button class="dc-card" data-dc="${dc.id}">
-      <div class="dc-icon"><i class="ti ${dc.icon || 'ti-building-warehouse'}"></i></div>
-      <div>
-        <p class="name">${dc.nama}</p>
-        <p class="sub">${dc.sub || ''}</p>
+    <div class="dc-card">
+      <div class="dc-card-main" data-dc-open="${dc.id}">
+        <div class="dc-icon"><i class="ti ${dc.icon || 'ti-building-warehouse'}"></i></div>
+        <div>
+          <p class="name">${dc.nama}</p>
+          <p class="sub">${dc.sub || ''}</p>
+        </div>
       </div>
-      <div class="footer"><span>Stock opname</span><i class="ti ti-arrow-right"></i></div>
-    </button>
+      <div class="footer">
+        <button class="btn-amber" data-dc-open="${dc.id}">Buka Sesi <i class="ti ti-arrow-right"></i></button>
+        <button class="btn-ghost admin-only hidden" data-dc-manage="${dc.id}"><i class="ti ti-adjustments"></i> Kelola Data</button>
+      </div>
+    </div>
   `).join('');
 
-  document.querySelectorAll('[data-dc]').forEach(card => {
-    card.onclick = () => openDc(card.getAttribute('data-dc'));
+  document.querySelectorAll('[data-dc-open]').forEach(elm => {
+    elm.onclick = () => openDc(elm.getAttribute('data-dc-open'));
   });
+  document.querySelectorAll('[data-dc-manage]').forEach(elm => {
+    elm.onclick = () => openManageZona(elm.getAttribute('data-dc-manage'));
+  });
+  if(state.profile?.admin === 'admin'){
+    document.querySelectorAll('#dcGrid .admin-only').forEach(b => b.classList.remove('hidden'));
+  }
 }
 
 el('backBtn').onclick = () => {

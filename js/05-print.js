@@ -147,7 +147,6 @@ async function loadZones(dcId){
 }
 
 function renderZonaGrid(){
-  el('addZonaBtn').classList.toggle('hidden', state.profile?.admin !== 'admin');
   if(!state.zonesList.length){
     el('zonaGrid').innerHTML = '';
     show('emptyZonaListMsg');
@@ -238,49 +237,5 @@ el('switchViewBtn').onclick = () => {
   } else {
     switchToAllDcView();
   }
-};
-
-// =========================================================
-// MODAL: ZONA BARU (admin doang)
-// =========================================================
-el('addZonaBtn').onclick = () => {
-  el('zoneModalId').value = '';
-  el('zoneModalNama').value = '';
-  el('zoneModalSave').disabled = false;
-  el('zoneModalSave').textContent = 'Simpan';
-  show('zoneModal');
-  el('zoneModalId').focus();
-};
-
-function closeZoneModal(){ hide('zoneModal'); }
-el('zoneModalCancel').onclick = closeZoneModal;
-el('zoneModal').addEventListener('click', e => {
-  if(e.target.id === 'zoneModal') closeZoneModal();
-});
-
-el('zoneModalSave').onclick = async () => {
-  const id = el('zoneModalId').value.trim();
-  const nama = el('zoneModalNama').value.trim();
-
-  if(!id){ alert('ID Zona wajib diisi.'); return; }
-  if(!nama){ alert('Nama Zona wajib diisi.'); return; }
-
-  el('zoneModalSave').disabled = true;
-  el('zoneModalSave').textContent = 'Menyimpan...';
-
-  const { error } = await sb.from('zones').insert({
-    id, nama, dc_id: state.currentDc.id,
-  });
-
-  if(error){
-    alert('Gagal bikin zona: ' + error.message);
-    el('zoneModalSave').disabled = false;
-    el('zoneModalSave').textContent = 'Simpan';
-    return;
-  }
-
-  await loadZones(state.currentDc.id);
-  renderZonaGrid();
-  closeZoneModal();
 };
 
