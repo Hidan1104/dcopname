@@ -165,6 +165,9 @@
   #manageDcScreen .wrap{ max-width:900px; margin:0 auto; padding:36px 18px 60px; }
   #manageDcScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px; }
   #manageDcScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0; }
+  #manageZonaScreen .wrap{ max-width:900px; margin:0 auto; padding:36px 18px 60px; }
+  #manageZonaScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px; }
+  #manageZonaScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0; }
   .dc-grid{
     display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:14px;
   }
@@ -541,7 +544,7 @@
   .dc-card .sub{ line-height:1.55; }
   .dc-card .footer{ color:#8290a7; }
   .dc-card .footer i{ color:var(--primary); }
-  .zona-picker-grid{ grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:16px; margin-top:30px; }
+  .zona-picker-grid{ grid-template-columns:repeat(5, 1fr); gap:16px; margin-top:30px; }
   .zona-card{ min-height:142px; justify-content:center; gap:10px; }
   .zona-card .zona-name{ font-size:25px; letter-spacing:-.8px; }
   .zona-card .zona-meta{ position:relative; z-index:1; font-size:12.5px; }
