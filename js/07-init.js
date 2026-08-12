@@ -6,8 +6,8 @@
     state.profile = { role: 'admin', nama: 'Mode Testing (tanpa login)' };
     await loadDcs();
     hide('loginScreen');
-    renderSelector();
-    show('selectorScreen');
+    renderMainMenu();
+    show('mainMenuScreen');
     return;
   }
   const { data } = await sb.auth.getSession();

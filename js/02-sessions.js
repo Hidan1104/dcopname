@@ -1,5 +1,33 @@
 // =========================================================
-// DC SELECTOR
+// MAIN MENU (abis login)
+// =========================================================
+function renderMainMenu(){
+  el('userChip9').innerHTML = `<i class="ti ti-user-circle"></i> ${state.profile?.nama || state.session?.user?.email || 'User'} ${state.profile?.admin === 'admin' ? '· Admin' : ''}`;
+  el('menuMasterBtn').classList.toggle('hidden', state.profile?.admin !== 'admin');
+}
+
+el('menuStockOpnameBtn').onclick = () => {
+  hide('mainMenuScreen');
+  renderSelector();
+  show('selectorScreen');
+};
+
+el('menuMasterBtn').onclick = () => {
+  hide('mainMenuScreen');
+  el('userChip9b').innerHTML = el('userChip9').innerHTML;
+  renderManageDcGrid();
+  show('manageDcScreen');
+};
+
+el('logoutBtn8').onclick = () => forceLogout();
+
+el('backFromSelectorBtn').onclick = () => {
+  hide('selectorScreen');
+  show('mainMenuScreen');
+};
+
+// =========================================================
+// DC SELECTOR (khusus Stock Opname)
 // =========================================================
 async function loadDcs(){
   const { data, error } = await sb.from('dcs').select('*').order('urutan');
@@ -13,7 +41,6 @@ async function loadDcs(){
 
 function renderSelector(){
   el('userChip').innerHTML = `<i class="ti ti-user-circle"></i> ${state.profile?.nama || state.session?.user?.email || 'User'} ${state.profile?.admin === 'admin' ? '· Admin' : ''}`;
-  el('addDcBtn').classList.toggle('hidden', state.profile?.admin !== 'admin');
 
   let dcsToShow = state.dcs;
   if(state.profile?.admin !== 'admin'){
@@ -22,30 +49,19 @@ function renderSelector(){
   }
 
   el('dcGrid').innerHTML = dcsToShow.map(dc => `
-    <div class="dc-card">
-      <div class="dc-card-main" data-dc-open="${dc.id}">
-        <div class="dc-icon"><i class="ti ${dc.icon || 'ti-building-warehouse'}"></i></div>
-        <div>
-          <p class="name">${dc.nama}</p>
-          <p class="sub">${dc.sub || ''}</p>
-        </div>
+    <button class="dc-card" data-dc="${dc.id}">
+      <div class="dc-icon"><i class="ti ${dc.icon || 'ti-building-warehouse'}"></i></div>
+      <div>
+        <p class="name">${dc.nama}</p>
+        <p class="sub">${dc.sub || ''}</p>
       </div>
-      <div class="footer">
-        <button class="btn-amber" data-dc-open="${dc.id}">Buka Sesi <i class="ti ti-arrow-right"></i></button>
-        <button class="btn-ghost admin-only hidden" data-dc-manage="${dc.id}"><i class="ti ti-adjustments"></i> Kelola Data</button>
-      </div>
-    </div>
+      <div class="footer"><span>Stock opname</span><i class="ti ti-arrow-right"></i></div>
+    </button>
   `).join('');
 
-  document.querySelectorAll('[data-dc-open]').forEach(elm => {
-    elm.onclick = () => openDc(elm.getAttribute('data-dc-open'));
+  document.querySelectorAll('[data-dc]').forEach(card => {
+    card.onclick = () => openDc(card.getAttribute('data-dc'));
   });
-  document.querySelectorAll('[data-dc-manage]').forEach(elm => {
-    elm.onclick = () => openManageZona(elm.getAttribute('data-dc-manage'));
-  });
-  if(state.profile?.admin === 'admin'){
-    document.querySelectorAll('#dcGrid .admin-only').forEach(b => b.classList.remove('hidden'));
-  }
 }
 
 el('backBtn').onclick = () => {
@@ -238,55 +254,4 @@ el('deleteModalCancel').onclick = closeDeleteModal;
 el('deleteModal').addEventListener('click', e => {
   if(e.target.id === 'deleteModal') closeDeleteModal();
 });
-
-// =========================================================
-// MODAL: DC BARU (admin doang)
-// =========================================================
-el('addDcBtn').onclick = () => {
-  el('dcModalId').value = '';
-  el('dcModalNama').value = '';
-  el('dcModalSub').value = '';
-  el('dcModalIcon').value = '';
-  el('dcModalSave').disabled = false;
-  el('dcModalSave').textContent = 'Simpan';
-  show('dcModal');
-  el('dcModalId').focus();
-};
-
-function closeDcModal(){ hide('dcModal'); }
-el('dcModalCancel').onclick = closeDcModal;
-el('dcModal').addEventListener('click', e => {
-  if(e.target.id === 'dcModal') closeDcModal();
-});
-
-el('dcModalSave').onclick = async () => {
-  const id = el('dcModalId').value.trim();
-  const nama = el('dcModalNama').value.trim();
-  const sub = el('dcModalSub').value.trim();
-  const icon = el('dcModalIcon').value.trim();
-
-  if(!id){ alert('ID DC wajib diisi.'); return; }
-  if(!nama){ alert('Nama DC wajib diisi.'); return; }
-
-  el('dcModalSave').disabled = true;
-  el('dcModalSave').textContent = 'Menyimpan...';
-
-  const { error } = await sb.from('dcs').insert({
-    id, nama,
-    sub: sub || null,
-    icon: icon || null,
-    urutan: state.dcs.length + 1,
-  });
-
-  if(error){
-    alert('Gagal bikin DC: ' + error.message);
-    el('dcModalSave').disabled = false;
-    el('dcModalSave').textContent = 'Simpan';
-    return;
-  }
-
-  await loadDcs();
-  renderSelector();
-  closeDcModal();
-};
 

@@ -85,8 +85,8 @@ async function afterLogin(){
   watchSessionKick();
   await loadDcs();
   hide('loginScreen');
-  renderSelector();
-  show('selectorScreen');
+  renderMainMenu();
+  show('mainMenuScreen');
 }
 
 [el('logoutBtn1'), el('logoutBtn2')].forEach(btn => {

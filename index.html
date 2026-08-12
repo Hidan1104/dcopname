@@ -36,8 +36,43 @@
 </div>
 
 <!-- ============ DC SELECTOR ============ -->
+<!-- ============ MAIN MENU (abis login) ============ -->
+<div id="mainMenuScreen" class="hidden">
+  <div class="topbar">
+    <div class="brand"><div class="mark"><i class="ti ti-building-warehouse"></i></div>Abuya Inventory</div>
+    <div class="topbar-right">
+      <span class="user-chip" id="userChip9"></span>
+      <button class="btn-ghost" id="logoutBtn8">Logout</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <h1>Mau ngapain hari ini?</h1>
+    <p class="hint">Pilih menu buat lanjut</p>
+    <div class="dc-grid">
+      <button class="dc-card" id="menuStockOpnameBtn">
+        <div class="dc-icon"><i class="ti ti-clipboard-list"></i></div>
+        <div>
+          <p class="name">Stock Opname</p>
+          <p class="sub">Proses counting & sesi stock opname</p>
+        </div>
+        <div class="footer"><span>Mulai</span><i class="ti ti-arrow-right"></i></div>
+      </button>
+      <button class="dc-card hidden" id="menuMasterBtn">
+        <div class="dc-icon"><i class="ti ti-database-cog"></i></div>
+        <div>
+          <p class="name">Master</p>
+          <p class="sub">Kelola DC, Zona, Sector, dan Produk</p>
+        </div>
+        <div class="footer"><span>Buka</span><i class="ti ti-arrow-right"></i></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DC SELECTOR (khusus Stock Opname) ============ -->
 <div id="selectorScreen" class="hidden">
   <div class="topbar">
+    <button class="back-btn" id="backFromSelectorBtn"><i class="ti ti-arrow-left"></i> Menu lain</button>
     <div class="brand"><div class="mark"><i class="ti ti-building-warehouse"></i></div>Abuya Inventory</div>
     <div class="topbar-right">
       <span class="user-chip" id="userChip"></span>
@@ -45,14 +80,31 @@
     </div>
   </div>
   <div class="wrap">
+    <h1>Pilih Distribution Center</h1>
+    <p class="hint" id="selectorHint">Pilih DC untuk melihat Zona</p>
+    <div class="dc-grid" id="dcGrid"></div>
+  </div>
+</div>
+
+<!-- ============ MASTER: PILIH DC (admin, kelola data) ============ -->
+<div id="manageDcScreen" class="hidden">
+  <div class="topbar">
+    <button class="back-btn" id="backFromManageDcBtn"><i class="ti ti-arrow-left"></i> Menu lain</button>
+    <div class="brand"><div class="mark"><i class="ti ti-database-cog"></i></div>Master Data</div>
+    <div class="topbar-right">
+      <span class="user-chip" id="userChip9b"></span>
+      <button class="btn-ghost" id="logoutBtn9">Logout</button>
+    </div>
+  </div>
+  <div class="wrap">
     <div class="session-list-head">
       <div>
         <h1>Pilih Distribution Center</h1>
-        <p class="hint" id="selectorHint">Pilih DC untuk melihat Zona</p>
+        <p class="hint">Pilih DC buat kelola Zona, Sector, dan Produk-nya.</p>
       </div>
-      <button class="btn-amber hidden" id="addDcBtn"><i class="ti ti-plus"></i> DC Baru</button>
+      <button class="btn-amber" id="addDcBtn"><i class="ti ti-plus"></i> DC Baru</button>
     </div>
-    <div class="dc-grid" id="dcGrid"></div>
+    <div class="dc-grid" id="manageDcGrid"></div>
   </div>
 </div>
 
@@ -321,6 +373,7 @@
       <button class="btn-ghost" id="addSectorBtn"><i class="ti ti-plus"></i> Sector Baru</button>
       <button class="btn-ghost" id="addProdukBtn"><i class="ti ti-plus"></i> Produk Baru</button>
     </div>
+    <div class="sector-manage-list" id="sectorManageList"></div>
     <div class="produk-grid" id="manageProdukGrid"></div>
     <div class="empty-state hidden" id="emptyManageProdukMsg">
       <p>Belum ada produk yang ke-assign ke sector di zona ini.</p>
@@ -331,7 +384,7 @@
 <!-- ============ MODAL: DC BARU (admin) ============ -->
 <div id="dcModal" class="modal-overlay hidden">
   <div class="modal-card">
-    <h2>DC Baru</h2>
+    <h2 id="dcModalTitle">DC Baru</h2>
     <div class="field">
       <label>ID (unik, huruf kecil, cth: dc-c)</label>
       <input type="text" id="dcModalId" placeholder="dc-c">
@@ -358,7 +411,7 @@
 <!-- ============ MODAL: ZONA BARU (admin) ============ -->
 <div id="zoneModal" class="modal-overlay hidden">
   <div class="modal-card">
-    <h2>Zona Baru</h2>
+    <h2 id="zoneModalTitle">Zona Baru</h2>
     <div class="field">
       <label>ID (unik, cth: dc-b-p)</label>
       <input type="text" id="zoneModalId" placeholder="dc-b-p">
@@ -377,7 +430,7 @@
 <!-- ============ MODAL: SECTOR BARU (admin) ============ -->
 <div id="sectorModal" class="modal-overlay hidden">
   <div class="modal-card">
-    <h2>Sector Baru</h2>
+    <h2 id="sectorModalTitle">Sector Baru</h2>
     <p class="modal-desc" id="sectorModalZonaInfo" style="margin-bottom:16px;"></p>
     <div class="field">
       <label>ID (unik, cth: dc-b-p-001)</label>
@@ -397,8 +450,8 @@
 <!-- ============ MODAL: PRODUK BARU (admin) ============ -->
 <div id="produkModal" class="modal-overlay hidden">
   <div class="modal-card">
-    <h2>Produk Baru</h2>
-    <p class="modal-desc" style="margin-bottom:16px;">Bikin produk baru (atau assign produk yang udah ada) ke sebuah sector.</p>
+    <h2 id="produkModalTitle">Produk Baru</h2>
+    <p class="modal-desc" id="produkModalDesc" style="margin-bottom:16px;">Bikin produk baru (atau assign produk yang udah ada) ke sebuah sector.</p>
     <div class="field">
       <label>Barcode</label>
       <input type="text" id="produkModalBarcode" placeholder="cth: B290720260099">

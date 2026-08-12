@@ -159,6 +159,12 @@
   #selectorScreen .wrap{ max-width:760px; margin:0 auto; padding:36px 18px 60px; }
   #selectorScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px; }
   #selectorScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0 0 22px; }
+  #mainMenuScreen .wrap{ max-width:760px; margin:0 auto; padding:36px 18px 60px; }
+  #mainMenuScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px; }
+  #mainMenuScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0 0 22px; }
+  #manageDcScreen .wrap{ max-width:900px; margin:0 auto; padding:36px 18px 60px; }
+  #manageDcScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px; }
+  #manageDcScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0; }
   .dc-grid{
     display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:14px;
   }
@@ -206,6 +212,11 @@
     font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:3px;
   }
   .zona-card .zona-meta span{ display:flex; align-items:center; gap:5px; }
+  .zona-card-main{
+    background:transparent; border:none; padding:0; text-align:left; cursor:pointer;
+    display:flex; flex-direction:column; gap:8px; width:100%;
+  }
+  .zona-card-actions{ display:flex; gap:6px; justify-content:flex-end; margin-top:2px; }
 
   /* ============ SESSION LIST ============ */
   #sessionListScreen .wrap{ max-width:820px; margin:0 auto; padding:36px 18px 60px; }
@@ -216,6 +227,19 @@
     flex-wrap:wrap; margin-bottom:22px;
   }
   .admin-actions{ display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .sector-manage-list{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+  .sector-chip{
+    display:flex; align-items:center; gap:2px;
+    background:var(--surface-1); border:1px solid var(--border); border-radius:20px;
+    padding:5px 6px 5px 14px; font-size:13px; font-weight:600;
+  }
+  .sector-chip .btn-icon-xs{
+    width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:transparent; border:none; color:var(--muted); font-size:12.5px;
+  }
+  .sector-chip .btn-icon-xs:hover{ background:var(--surface-0); color:var(--ink); }
+  .sector-chip .btn-icon-xs.danger:hover{ background:var(--danger-soft); color:var(--danger); }
+  .produk-card .produk-manage-actions{ display:flex; gap:4px; flex-shrink:0; }
   .session-list{ display:flex; flex-direction:column; gap:12px; }
   .session-card{
     background:var(--surface-1); border:1px solid var(--border); border-radius:14px;

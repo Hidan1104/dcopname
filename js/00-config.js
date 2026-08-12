@@ -38,6 +38,14 @@ let state = {
   reviewSessionId: null,
   reviewRows: [],
   exportingSession: null,
+  zoneModalMode: null,
+  zoneModalEditingId: null,
+  dcModalMode: null,
+  dcModalEditingId: null,
+  sectorModalMode: null,
+  sectorModalEditingId: null,
+  produkModalMode: null,
+  produkModalEditingPsId: null,
 };
 
 function formatTanggal(t){
