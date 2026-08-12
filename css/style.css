@@ -216,7 +216,7 @@
     background:transparent; border:none; padding:0; text-align:left; cursor:pointer;
     display:flex; flex-direction:column; gap:8px; width:100%;
   }
-  .zona-card-actions{ display:flex; gap:6px; justify-content:flex-end; margin-top:2px; }
+  .zona-card-actions{ display:flex; gap:6px; justify-content:flex-start; margin-top:2px; }
 
   /* ============ SESSION LIST ============ */
   #sessionListScreen .wrap{ max-width:820px; margin:0 auto; padding:36px 18px 60px; }
