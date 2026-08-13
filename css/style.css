@@ -567,8 +567,8 @@
   .dc-card:hover, .zona-card:hover{ border-color:#aebcfa; background:#fff; box-shadow:0 18px 38px rgba(40,65,154,.14); transform:translateY(-4px); }
   .dc-icon{ width:49px; height:49px; border-radius:15px; background:linear-gradient(135deg, #e9eeff, #f2f8ff); }
   .dc-icon i{ font-size:23px; color:var(--primary); }
-  .dc-card .name{ font-family:'Space Grotesk',sans-serif; font-size:18px; letter-spacing:-.35px; font-style: italic; }
-  .dc-card .sub{ line-height:1.55; }
+  .dc-card .name{ font-family:'Space Grotesk',sans-serif; font-size:18px; letter-spacing:-.35px; }
+  .dc-card .sub{ line-height:1.55; font-style:italic }
   .dc-card .footer{ color:#8290a7; }
   .dc-card .footer i{ color:var(--primary); }
   .zona-picker-grid{ grid-template-columns:repeat(5, 1fr); gap:16px; margin-top:30px; }
