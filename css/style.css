@@ -665,3 +665,94 @@
     .produk-card:hover{ transform:none; }
     .footer-bar{ min-height:56px; }
   }
+
+  /* ============ MASTER DATA & COMMAND CENTER ============ */
+  #mainMenuScreen .wrap,
+  #masterMenuScreen .wrap,
+  #manageDcScreen .wrap,
+  #manageZonaScreen .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding:42px clamp(18px, 4vw, 44px) 84px;
+  }
+  #mainMenuScreen .wrap::before,
+  #masterMenuScreen .wrap::before,
+  #manageDcScreen .wrap::before,
+  #manageZonaScreen .wrap::before{
+    content:"ABUYA · COMMAND CENTER";
+    display:block;
+    margin-bottom:11px;
+    color:var(--primary);
+    font:600 11px 'IBM Plex Mono', monospace;
+    letter-spacing:.13em;
+  }
+  #mainMenuScreen h1, #masterMenuScreen h1, #manageDcScreen h1, #manageZonaScreen h1{
+    margin:0;
+    font:700 clamp(25px, 3vw, 32px)/1.13 'Space Grotesk', sans-serif;
+    letter-spacing:-1px;
+  }
+  #mainMenuScreen .hint, #masterMenuScreen .hint, #manageDcScreen .hint, #manageZonaScreen .hint{
+    margin:8px 0 0;
+    font-size:14px;
+  }
+  #mainMenuScreen .dc-grid, #masterMenuScreen .dc-grid{ max-width:760px; }
+  #mainMenuScreen .dc-card, #masterMenuScreen .dc-card{
+    min-height:230px;
+    justify-content:space-between;
+  }
+  #mainMenuScreen .dc-card:first-child .dc-icon{
+    color:#fff;
+    background:linear-gradient(135deg, #4569ee, #263fb8);
+    box-shadow:0 12px 22px rgba(52,85,219,.25);
+  }
+  #mainMenuScreen .dc-card:first-child .dc-icon i{ color:#fff; }
+  .admin-actions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:0 0 18px;
+    padding:13px;
+    border:1px solid var(--border);
+    border-radius:14px;
+    background:rgba(255,255,255,.78);
+    box-shadow:0 5px 18px rgba(32,50,103,.04);
+  }
+  .admin-actions .btn-ghost{
+    color:var(--primary);
+    border-color:#cbd5ff;
+    background:#f5f7ff;
+  }
+  .admin-actions .btn-ghost:hover{
+    color:#fff;
+    border-color:var(--primary);
+    background:var(--primary);
+  }
+  .sector-manage-list{
+    gap:9px;
+    margin-bottom:18px;
+    padding:14px;
+    border:1px solid var(--border);
+    border-radius:15px;
+    background:#fff;
+  }
+  .sector-manage-card, .sector-card{
+    border-radius:11px !important;
+    border-color:#dce4f0 !important;
+    background:#f8faff !important;
+  }
+  .produk-card .produk-manage-actions{
+    gap:6px;
+    padding-left:10px;
+    border-left:1px solid var(--border);
+  }
+  .modal-card .field input::placeholder{ color:#a5b0c2; }
+
+  @media (min-width:601px) and (max-width:980px){
+    .zona-picker-grid{ grid-template-columns:repeat(3, 1fr); }
+  }
+  @media (max-width:600px){
+    #mainMenuScreen .wrap, #masterMenuScreen .wrap, #manageDcScreen .wrap, #manageZonaScreen .wrap{ padding:30px 16px 65px; }
+    #mainMenuScreen .dc-card, #masterMenuScreen .dc-card{ min-height:185px; }
+    .admin-actions{ padding:10px; }
+    .produk-card .produk-manage-actions{ padding-left:0; border-left:0; }
+  }
