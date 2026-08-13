@@ -38,7 +38,7 @@ function renderManageDcGrid(){
 
 el('backFromManageDcBtn').onclick = () => {
   hide('manageDcScreen');
-  show('mainMenuScreen');
+  show('masterMenuScreen');
 };
 
 el('logoutBtn9').onclick = () => forceLogout();
@@ -266,18 +266,11 @@ function renderManageProdukList(){
         <span class="sector-tag">${p.sector_nama}</span>
       </div>
       <div class="produk-manage-actions">
-        <button class="btn-icon" data-edit-produk="${p.id}" title="Edit"><i class="ti ti-edit"></i></button>
-        <button class="btn-icon danger" data-delete-produk="${p.id}" title="Hapus dari sector ini"><i class="ti ti-trash"></i></button>
+        <button class="btn-icon danger" data-delete-produk="${p.id}" title="Lepas dari sector ini"><i class="ti ti-trash"></i></button>
       </div>
     </div>
   `).join('');
 
-  document.querySelectorAll('[data-edit-produk]').forEach(btn => {
-    btn.onclick = () => {
-      const item = state.produkList.find(p => String(p.id) === btn.getAttribute('data-edit-produk'));
-      if(item) openProdukModal('edit', item);
-    };
-  });
   document.querySelectorAll('[data-delete-produk]').forEach(btn => {
     btn.onclick = () => {
       const item = state.produkList.find(p => String(p.id) === btn.getAttribute('data-delete-produk'));
@@ -467,44 +460,40 @@ async function deleteSector(sectorId){
 }
 
 // =========================================================
-// MODAL: PRODUK BARU / EDIT PRODUK
-// mode create: bikin/assign produk (baru atau existing) ke sector
-// mode edit: update detail master_produk + boleh pindah sector assignment-nya
+// MODAL: ASSIGN PRODUK KE SECTOR
+// Cari produk yang UDAH ada di master_produk (dikelola dari menu
+// Master > Produk), terus assign ke sector yang lagi dibuka. Modal ini
+// GAK bisa bikin produk baru lagi -- itu sekarang cuma bisa dari
+// Master > Produk.
 // =========================================================
-function openProdukModal(mode, item){
-  state.produkModalMode = mode;
-  state.produkModalEditingPsId = item ? item.id : null;
-
-  el('produkModalTitle').textContent = mode === 'create' ? 'Produk Baru' : 'Edit Produk';
-  el('produkModalDesc').textContent = mode === 'create'
-    ? 'Bikin produk baru (atau assign produk yang udah ada) ke sebuah sector.'
-    : 'Update detail produk, atau pindahin ke sector laen.';
-  el('produkModalBarcode').disabled = mode === 'edit'; // barcode itu primary key master_produk, dikunci pas edit
-
-  el('produkModalBarcode').value = mode === 'edit' ? item.barcode : '';
-  el('produkModalNama').value = mode === 'edit' ? item.nama : '';
-  el('produkModalKode').value = mode === 'edit' ? (item.kode_produk || '') : '';
-  el('produkModalKategori').value = mode === 'edit' ? (item.kategori || '') : '';
-  el('produkModalSubKategori').value = mode === 'edit' ? (item.sub_kategori || '') : '';
-  el('produkModalSatuan').value = mode === 'edit' ? (item.satuan || '') : '';
-
-  el('produkModalSector').innerHTML = state.sectorsList
-    .map(s => `<option value="${s.id}">${s.nama}</option>`).join('');
-  el('produkModalSector').value = mode === 'edit' ? item.sector_id : (state.sectorFilter || state.sectorsList[0].id);
-
-  el('produkModalSave').disabled = false;
-  el('produkModalSave').textContent = 'Simpan';
-  show('produkModal');
-  el(mode === 'edit' ? 'produkModalNama' : 'produkModalBarcode').focus();
-}
-
-el('addProdukBtn').onclick = () => {
+async function openAssignProdukModal(){
   if(!state.sectorsList.length){
     alert('Belum ada sector yang bisa dipilih. Bikin sector dulu.');
     return;
   }
-  openProdukModal('create');
-};
+
+  state.assignProdukSelected = null;
+  el('assignProdukSearch').value = '';
+  el('assignProdukResults').innerHTML = '';
+  el('assignProdukResults').classList.remove('show');
+  hide('assignProdukSelectedWrap');
+  el('produkModalSector').innerHTML = state.sectorsList
+    .map(s => `<option value="${s.id}">${s.nama}</option>`).join('');
+  el('produkModalSector').value = state.sectorFilter || state.sectorsList[0].id;
+  el('produkModalSave').disabled = true;
+  el('produkModalSave').textContent = 'Simpan';
+
+  // Cache semua master_produk sekali aja (dipake buat filter cari di client)
+  if(!state.allMasterProduk.length){
+    const { data, error } = await sb.from('master_produk').select('*').order('nama');
+    if(!error) state.allMasterProduk = data || [];
+  }
+
+  show('produkModal');
+  el('assignProdukSearch').focus();
+}
+
+el('addProdukBtn').onclick = openAssignProdukModal;
 
 function closeProdukModal(){ hide('produkModal'); }
 el('produkModalCancel').onclick = closeProdukModal;
@@ -512,71 +501,86 @@ el('produkModal').addEventListener('click', e => {
   if(e.target.id === 'produkModal') closeProdukModal();
 });
 
-el('produkModalSave').onclick = async () => {
-  const barcode = el('produkModalBarcode').value.trim();
-  const nama = el('produkModalNama').value.trim();
-  const kode_produk = el('produkModalKode').value.trim();
-  const kategori = el('produkModalKategori').value.trim();
-  const sub_kategori = el('produkModalSubKategori').value.trim();
-  const satuan = el('produkModalSatuan').value.trim();
-  const sectorId = el('produkModalSector').value;
-  const isEdit = state.produkModalMode === 'edit';
+el('assignProdukSearch').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  const results = el('assignProdukResults');
+  if(!q){
+    results.innerHTML = '';
+    results.classList.remove('show');
+    return;
+  }
+  const matches = state.allMasterProduk.filter(p =>
+    p.nama?.toLowerCase().includes(q) ||
+    p.barcode?.toLowerCase().includes(q) ||
+    p.kode_produk?.toLowerCase().includes(q)
+  ).slice(0, 20);
 
-  if(!barcode){ alert('Barcode wajib diisi.'); return; }
+  if(!matches.length){
+    results.innerHTML = `<div class="assign-produk-result-item">Gak ketemu. Bikin dulu lewat Master → Produk.</div>`;
+    results.classList.add('show');
+    return;
+  }
+
+  results.innerHTML = matches.map(p => `
+    <div class="assign-produk-result-item" data-pick-produk="${p.barcode}">
+      <b>${p.nama}</b>
+      <span>${p.barcode}${p.kode_produk ? ' · ' + p.kode_produk : ''}</span>
+    </div>
+  `).join('');
+  results.classList.add('show');
+
+  document.querySelectorAll('[data-pick-produk]').forEach(el2 => {
+    el2.onclick = () => pickAssignProduk(el2.getAttribute('data-pick-produk'));
+  });
+});
+
+function pickAssignProduk(barcode){
+  const produk = state.allMasterProduk.find(p => p.barcode === barcode);
+  if(!produk) return;
+  state.assignProdukSelected = produk;
+
+  el('assignProdukSelected').innerHTML = `
+    <span>${produk.nama} <span style="font-weight:400;opacity:.75;">(${produk.barcode})</span></span>
+    <button type="button" id="assignProdukClear" title="Ganti produk"><i class="ti ti-x"></i></button>
+  `;
+  show('assignProdukSelectedWrap');
+  el('assignProdukSearch').value = '';
+  el('assignProdukResults').innerHTML = '';
+  el('assignProdukResults').classList.remove('show');
+  el('produkModalSave').disabled = false;
+
+  el('assignProdukClear').onclick = () => {
+    state.assignProdukSelected = null;
+    hide('assignProdukSelectedWrap');
+    el('produkModalSave').disabled = true;
+    el('assignProdukSearch').focus();
+  };
+}
+
+el('produkModalSave').onclick = async () => {
+  const produk = state.assignProdukSelected;
+  const sectorId = el('produkModalSector').value;
+
+  if(!produk){ alert('Cari & pilih produk dulu.'); return; }
   if(!sectorId){ alert('Pilih sector dulu.'); return; }
-  if(!nama){ alert('Nama produk wajib diisi.'); return; }
 
   el('produkModalSave').disabled = true;
   el('produkModalSave').textContent = 'Menyimpan...';
 
   try {
-    if(isEdit){
-      // Update detail produk di master_produk (barcode-nya sendiri dikunci/gak berubah)
-      const { error: updateErr } = await sb.from('master_produk').update({
-        nama,
-        kode_produk: kode_produk || null,
-        kategori: kategori || null,
-        sub_kategori: sub_kategori || null,
-        satuan: satuan || null,
-      }).eq('barcode', barcode);
-      if(updateErr) throw updateErr;
+    // Cek udah ke-assign ke sector ini apa belum, biar gak dobel
+    const { data: existingPs, error: psFindErr } = await sb
+      .from('produk_sectors').select('id').eq('barcode', produk.barcode).eq('sector_id', sectorId).maybeSingle();
+    if(psFindErr) throw psFindErr;
 
-      // Kalau sector-nya diganti, geser assignment produk_sectors row ini
-      // (pake id row-nya sendiri, biar gak ketuker sama assignment laen)
-      const { error: moveErr } = await sb.from('produk_sectors')
-        .update({ sector_id: sectorId }).eq('id', state.produkModalEditingPsId);
-      if(moveErr) throw moveErr;
+    if(existingPs){
+      alert('Produk ini udah ke-assign ke sector ini sebelumnya.');
     } else {
-      // Cek dulu barcode ini udah ada di master_produk apa belum
-      const { data: existing, error: findErr } = await sb
-        .from('master_produk').select('barcode').eq('barcode', barcode).maybeSingle();
-      if(findErr) throw findErr;
-
-      if(!existing){
-        const { error: insertProdukErr } = await sb.from('master_produk').insert({
-          barcode, nama,
-          kode_produk: kode_produk || null,
-          kategori: kategori || null,
-          sub_kategori: sub_kategori || null,
-          satuan: satuan || null,
-        });
-        if(insertProdukErr) throw insertProdukErr;
-      }
-
-      // Cek udah ke-assign ke sector ini apa belum, biar gak dobel
-      const { data: existingPs, error: psFindErr } = await sb
-        .from('produk_sectors').select('id').eq('barcode', barcode).eq('sector_id', sectorId).maybeSingle();
-      if(psFindErr) throw psFindErr;
-
-      if(existingPs){
-        alert('Produk ini udah ke-assign ke sector ini sebelumnya.');
-      } else {
-        const sequence = state.produkList.filter(p => p.sector_id === sectorId).length + 1;
-        const { error: psErr } = await sb.from('produk_sectors').insert({
-          barcode, sector_id: sectorId, sequence,
-        });
-        if(psErr) throw psErr;
-      }
+      const sequence = state.produkList.filter(p => p.sector_id === sectorId).length + 1;
+      const { error: psErr } = await sb.from('produk_sectors').insert({
+        barcode: produk.barcode, sector_id: sectorId, sequence,
+      });
+      if(psErr) throw psErr;
     }
 
     await loadProdukForZona(state.currentZonaId);
@@ -585,7 +589,7 @@ el('produkModalSave').onclick = async () => {
     renderManageProdukList();
     closeProdukModal();
   } catch(err){
-    alert('Gagal simpan produk: ' + (err.message || err));
+    alert('Gagal assign produk: ' + (err.message || err));
   } finally {
     el('produkModalSave').disabled = false;
     el('produkModalSave').textContent = 'Simpan';

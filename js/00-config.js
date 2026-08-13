@@ -46,6 +46,11 @@ let state = {
   sectorModalEditingId: null,
   produkModalMode: null,
   produkModalEditingPsId: null,
+  assignProdukSelected: null,
+  allMasterProduk: [],
+  produkMasterModalMode: null,
+  produkMasterModalEditingBarcode: null,
+  produkMasterSearchQuery: '',
 };
 
 function formatTanggal(t){

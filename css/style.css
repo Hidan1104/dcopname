@@ -243,6 +243,29 @@
   .sector-chip .btn-icon-xs:hover{ background:var(--surface-0); color:var(--ink); }
   .sector-chip .btn-icon-xs.danger:hover{ background:var(--danger-soft); color:var(--danger); }
   .produk-card .produk-manage-actions{ display:flex; gap:4px; flex-shrink:0; }
+
+  .assign-produk-results{
+    margin-top:6px; max-height:200px; overflow-y:auto;
+    border:1px solid var(--border); border-radius:8px; display:none;
+  }
+  .assign-produk-results.show{ display:block; }
+  .assign-produk-result-item{
+    padding:9px 12px; cursor:pointer; font-size:13.5px; border-bottom:1px solid var(--border);
+  }
+  .assign-produk-result-item:last-child{ border-bottom:none; }
+  .assign-produk-result-item:hover{ background:var(--surface-0); }
+  .assign-produk-result-item b{ color:var(--ink); }
+  .assign-produk-result-item span{ color:var(--muted); font-size:12px; display:block; margin-top:2px; }
+  .assign-produk-selected{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 12px; background:var(--primary-soft); border-radius:8px;
+    font-size:13.5px; font-weight:600; color:var(--primary);
+  }
+  .assign-produk-selected button{
+    background:transparent; border:none; color:var(--primary); cursor:pointer;
+    font-size:16px; display:flex; align-items:center; flex-shrink:0;
+  }
+  .assign-produk-selected button:hover{ color:var(--danger); }
   .session-list{ display:flex; flex-direction:column; gap:12px; }
   .session-card{
     background:var(--surface-1); border:1px solid var(--border); border-radius:14px;

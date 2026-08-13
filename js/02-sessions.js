@@ -14,6 +14,19 @@ el('menuStockOpnameBtn').onclick = () => {
 
 el('menuMasterBtn').onclick = () => {
   hide('mainMenuScreen');
+  el('userChip10').innerHTML = el('userChip9').innerHTML;
+  show('masterMenuScreen');
+};
+
+el('backFromMasterMenuBtn').onclick = () => {
+  hide('masterMenuScreen');
+  show('mainMenuScreen');
+};
+
+el('logoutBtn10').onclick = () => forceLogout();
+
+el('masterMenuDcBtn').onclick = () => {
+  hide('masterMenuScreen');
   el('userChip9b').innerHTML = el('userChip9').innerHTML;
   renderManageDcGrid();
   show('manageDcScreen');
