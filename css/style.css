@@ -553,7 +553,7 @@
   /* Distribution center & zone cards */
   .dc-grid{ grid-template-columns:repeat(auto-fit, minmax(270px, 1fr)); gap:18px; margin-top:30px; }
   #masterMenuScreen .wrap{ max-width:900px; margin:0 auto; padding:36px 18px 60px; }
-  #masterMenuScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px;}
+  #masterMenuScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px; font-style:underline; }
   #masterMenuScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0; font-style:italic; }
   .dc-card, .zona-card{
     position:relative; overflow:hidden; min-height:184px; padding:23px; border-radius:20px; border-color:var(--border);
@@ -603,8 +603,8 @@
   }
   .session-name-label{ color:var(--muted); font-size:13px; }
   .session-name-label b{ color:var(--primary); }
-  .search-box{ min-width:250px; padding:9px 12px; border-radius:11px; border-color:#dce4f0; background:#fafcff; }
-  .search-box:focus-within{ border-color:var(--primary); background:#fff; box-shadow:0 0 0 4px rgba(52,85,219,.1); }
+  .search-box{ min-width:250px; padding:9px 12px; border-radius:11px; border:1px solid transparent; background:#eef2f9; }
+  .search-box:focus-within{ border-color:var(--primary); background:#fff; }
   .search-box i{ color:var(--primary); }
   .search-box input{ font-size:13px; }
   .sector-filter{ min-width:165px; }
@@ -620,6 +620,10 @@
   .produk-card .qty{ color:var(--primary); font-size:19px; }
   .produk-card .qty.kosong{ color:#8b98ab; background:transparent; }
   .produk-card .uom{ color:#657595; }
+  #manageProdukScreen .produk-card .qty-row,
+  #manageProdukMasterScreen .produk-card .qty-row{
+    width:auto; padding:5px 12px;
+  }
   .produk-card .scanned-by{ color:var(--success); padding:4px 8px; border-radius:10px; background:var(--success-soft); }
   .produk-card .sector-tag{ color:#667693; background:#f0f3f8; padding:4px 8px; }
   .footer-bar{
