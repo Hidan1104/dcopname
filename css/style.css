@@ -603,8 +603,8 @@
   }
   .session-name-label{ color:var(--muted); font-size:13px; }
   .session-name-label b{ color:var(--primary); }
-  .search-box{ min-width:250px; padding:9px 4px; border:none; border-radius:0px; background:transparent; }
-  .search-box:focus-within{ border-color:var(--primary); background:#fff; }
+  .search-box{ min-width:250px; padding:9px 12px; border-radius:11px; border:1px solid transparent; background:#eef2f9; }
+  .search-box:focus-within{ background:transparent; }
   .search-box i{ color:var(--primary); }
   .search-box input{ font-size:13px; }
   .sector-filter{ min-width:165px; }
