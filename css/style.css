@@ -161,7 +161,7 @@
   #selectorScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0 0 22px; }
   #mainMenuScreen .wrap{ max-width:900px; margin:0 auto; padding:36px 18px 60px; }
   #mainMenuScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px; }
-  #mainMenuScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0; }
+  #mainMenuScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0; font-style: italic; }
   #manageDcScreen .wrap{ max-width:900px; margin:0 auto; padding:36px 18px 60px; }
   #manageDcScreen h1{ font-size:19px; font-weight:600; margin:0 0 4px; }
   #manageDcScreen p.hint{ color:var(--muted); font-size:13.5px; margin:0; }
