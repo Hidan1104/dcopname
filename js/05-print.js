@@ -184,6 +184,7 @@ async function openZona(zonaId){
   show('sessionBar');
   el('searchInput').value = '';
   state.searchQuery = '';
+  state.dashboardPage = 1;
 
   hide('zonaScreen');
   show('dashboardScreen');
@@ -213,6 +214,7 @@ async function switchToAllDcView(){
   updateSessionNameLabels();
   el('searchInput').value = '';
   state.searchQuery = '';
+  state.dashboardPage = 1;
 
   hide('zonaScreen');
   show('dashboardScreen');

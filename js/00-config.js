@@ -51,6 +51,8 @@ let state = {
   produkMasterModalMode: null,
   produkMasterModalEditingBarcode: null,
   produkMasterSearchQuery: '',
+  dashboardPage: 1,
+  produkMasterPage: 1,
 };
 
 function formatTanggal(t){

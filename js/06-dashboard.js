@@ -168,13 +168,25 @@ function getUpdatedByNama(e){
 
 el('searchInput').addEventListener('input', (e) => {
   state.searchQuery = e.target.value.toLowerCase();
+  state.dashboardPage = 1;
   renderDashboard();
 });
 
 el('sectorFilterSelect').addEventListener('change', (e) => {
   state.sectorFilter = e.target.value;
+  state.dashboardPage = 1;
   renderDashboard();
 });
+
+el('produkPagePrev').onclick = () => {
+  state.dashboardPage -= 1;
+  renderDashboard();
+};
+
+el('produkPageNext').onclick = () => {
+  state.dashboardPage += 1;
+  renderDashboard();
+};
 
 function renderDashboard(){
   // Produk di zona ini (udah discope dari loadProdukForZona), difilter lagi
@@ -207,10 +219,19 @@ function renderDashboard(){
     !state.searchQuery || p.nama.toLowerCase().includes(state.searchQuery)
   );
 
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if(state.dashboardPage > totalPages) state.dashboardPage = totalPages;
+  if(state.dashboardPage < 1) state.dashboardPage = 1;
+  const pageItems = filtered.slice(
+    (state.dashboardPage - 1) * PAGE_SIZE,
+    state.dashboardPage * PAGE_SIZE
+  );
+
   if(!filtered.length){
     el('produkGrid').innerHTML = `<div class="empty-state">Gak ada produk yang cocok.</div>`;
   } else {
-    el('produkGrid').innerHTML = filtered.map(p => {
+    el('produkGrid').innerHTML = pageItems.map(p => {
       const e = state.entries[`${p.barcode}|${p.sector_id}`];
       const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : null;
       return `
@@ -228,6 +249,12 @@ function renderDashboard(){
         </div>`;
     }).join('');
   }
+
+  // Pagination bar -- disembunyiin kalau produknya cuma muat 1 halaman aja
+  el('produkPagination').classList.toggle('hidden', totalPages <= 1);
+  el('produkPageInfo').textContent = `Halaman ${state.dashboardPage} dari ${totalPages}`;
+  el('produkPagePrev').disabled = state.dashboardPage <= 1;
+  el('produkPageNext').disabled = state.dashboardPage >= totalPages;
 
   const checked = produkZonaIni.filter(p => {
     const e = state.entries[`${p.barcode}|${p.sector_id}`];

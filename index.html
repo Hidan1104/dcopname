@@ -46,8 +46,8 @@
     </div>
   </div>
   <div class="wrap">
-    <h1>Welcome to Abuya Inventory</h1>
-    <p class="hint">Have a great day!</p>
+    <h1>Mau ngapain hari ini?</h1>
+    <p class="hint">Pilih menu buat lanjut</p>
     <div class="dc-grid">
       <button class="dc-card" id="menuStockOpnameBtn">
         <div class="dc-icon"><i class="ti ti-clipboard-list"></i></div>
@@ -55,7 +55,7 @@
           <p class="name">Stock Opname</p>
           <p class="sub">Proses counting & sesi stock opname</p>
         </div>
-        <div class="footer"><span>Bismillah</span><i class="ti ti-arrow-right"></i></div>
+        <div class="footer"><span>Mulai</span><i class="ti ti-arrow-right"></i></div>
       </button>
       <button class="dc-card hidden" id="menuMasterBtn">
         <div class="dc-icon"><i class="ti ti-database-cog"></i></div>
@@ -63,7 +63,7 @@
           <p class="name">Master</p>
           <p class="sub">Kelola DC, Zona, Sector, dan Produk</p>
         </div>
-        <div class="footer"><span>Aku atmin!</span><i class="ti ti-arrow-right"></i></div>
+        <div class="footer"><span>Buka</span><i class="ti ti-arrow-right"></i></div>
       </button>
     </div>
   </div>
@@ -112,7 +112,7 @@
         <div class="dc-icon"><i class="ti ti-building-warehouse"></i></div>
         <div>
           <p class="name">DC</p>
-          <p class="sub">Kelola DC, Zona, Sector, dan assign existing item ke sector</p>
+          <p class="sub">kelola DC, Zona, Sector, dan assign existing item ke sector</p>
         </div>
         <div class="footer"><span>Klik aje udeh</span><i class="ti ti-arrow-right"></i></div>
       </button>
@@ -147,6 +147,11 @@
       <button class="btn-ghost" id="addProdukMasterBtn"><i class="ti ti-plus"></i> Produk Baru</button>
     </div>
     <div class="produk-grid" id="produkMasterGrid"></div>
+    <div class="pagination-bar hidden" id="produkMasterPagination">
+      <button class="btn-ghost" id="produkMasterPagePrev"><i class="ti ti-chevron-left"></i></button>
+      <span class="pagination-info" id="produkMasterPageInfo">Halaman 1 dari 1</span>
+      <button class="btn-ghost" id="produkMasterPageNext"><i class="ti ti-chevron-right"></i></button>
+    </div>
     <div class="empty-state hidden" id="emptyProdukMasterMsg"><p>Belum ada produk yang terdaftar.</p></div>
   </div>
 </div>
@@ -298,6 +303,11 @@
       </div>
     </div>
     <div class="produk-grid" id="produkGrid"></div>
+    <div class="pagination-bar hidden" id="produkPagination">
+      <button class="btn-ghost" id="produkPagePrev"><i class="ti ti-chevron-left"></i></button>
+      <span class="pagination-info" id="produkPageInfo">Halaman 1 dari 1</span>
+      <button class="btn-ghost" id="produkPageNext"><i class="ti ti-chevron-right"></i></button>
+    </div>
     <div class="empty-state hidden" id="noSessionMsg">
       <p>Memuat sesi opname...</p>
     </div>
@@ -459,11 +469,11 @@
       <input type="text" id="dcModalNama" placeholder="cth: DC C">
     </div>
     <div class="field">
-      <label>Sub-judul</label>
+      <label>Sub-judul (opsional)</label>
       <input type="text" id="dcModalSub" placeholder="cth: Jakarta Timur">
     </div>
     <div class="field" style="margin-bottom:0;">
-      <label>Icon Tabler</label>
+      <label>Icon Tabler (opsional)</label>
       <input type="text" id="dcModalIcon" placeholder="ti-building-warehouse">
     </div>
     <div class="modal-actions">
@@ -550,19 +560,19 @@
       <input type="text" id="produkMasterModalNama" placeholder="cth: Sambal Bawang Sachet">
     </div>
     <div class="field">
-      <label>Kode Produk</label>
+      <label>Kode Produk (opsional)</label>
       <input type="text" id="produkMasterModalKode" placeholder="cth: A011099">
     </div>
     <div class="field">
-      <label>Kategori</label>
+      <label>Kategori (opsional)</label>
       <input type="text" id="produkMasterModalKategori" placeholder="cth: FOOD">
     </div>
     <div class="field">
-      <label>Sub Kategori</label>
+      <label>Sub Kategori (opsional)</label>
       <input type="text" id="produkMasterModalSubKategori" placeholder="cth: Bumbu">
     </div>
     <div class="field" style="margin-bottom:0;">
-      <label>Satuan</label>
+      <label>Satuan (opsional)</label>
       <input type="text" id="produkMasterModalSatuan" placeholder="cth: pack">
     </div>
     <div class="modal-actions">

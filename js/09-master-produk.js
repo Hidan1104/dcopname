@@ -6,6 +6,7 @@ el('masterMenuProdukBtn').onclick = () => {
   hide('masterMenuScreen');
   el('userChip11').innerHTML = el('userChip10').innerHTML;
   state.produkMasterSearchQuery = '';
+  state.produkMasterPage = 1;
   el('produkMasterSearchInput').value = '';
   show('manageProdukMasterScreen');
   loadAndRenderProdukMaster();
@@ -32,6 +33,7 @@ async function loadAndRenderProdukMaster(){
 function renderProdukMasterGrid(){
   if(!state.allMasterProduk.length){
     el('produkMasterGrid').innerHTML = '';
+    el('produkMasterPagination').classList.add('hidden');
     show('emptyProdukMasterMsg');
     return;
   }
@@ -47,10 +49,20 @@ function renderProdukMasterGrid(){
 
   if(!filtered.length){
     el('produkMasterGrid').innerHTML = `<div class="empty-state">Gak ada produk yang cocok.</div>`;
+    el('produkMasterPagination').classList.add('hidden');
     return;
   }
 
-  el('produkMasterGrid').innerHTML = filtered.map(p => `
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if(state.produkMasterPage > totalPages) state.produkMasterPage = totalPages;
+  if(state.produkMasterPage < 1) state.produkMasterPage = 1;
+  const pageItems = filtered.slice(
+    (state.produkMasterPage - 1) * PAGE_SIZE,
+    state.produkMasterPage * PAGE_SIZE
+  );
+
+  el('produkMasterGrid').innerHTML = pageItems.map(p => `
     <div class="produk-card">
       <span class="kategori-tag">${p.kategori || '-'}</span>
       <div class="nama">${p.nama}</div>
@@ -66,6 +78,11 @@ function renderProdukMasterGrid(){
     </div>
   `).join('');
 
+  el('produkMasterPagination').classList.toggle('hidden', totalPages <= 1);
+  el('produkMasterPageInfo').textContent = `Halaman ${state.produkMasterPage} dari ${totalPages}`;
+  el('produkMasterPagePrev').disabled = state.produkMasterPage <= 1;
+  el('produkMasterPageNext').disabled = state.produkMasterPage >= totalPages;
+
   document.querySelectorAll('[data-edit-produk-master]').forEach(btn => {
     btn.onclick = () => {
       const p = state.allMasterProduk.find(x => x.barcode === btn.getAttribute('data-edit-produk-master'));
@@ -77,8 +94,19 @@ function renderProdukMasterGrid(){
   });
 }
 
+el('produkMasterPagePrev').onclick = () => {
+  state.produkMasterPage -= 1;
+  renderProdukMasterGrid();
+};
+
+el('produkMasterPageNext').onclick = () => {
+  state.produkMasterPage += 1;
+  renderProdukMasterGrid();
+};
+
 el('produkMasterSearchInput').addEventListener('input', (e) => {
   state.produkMasterSearchQuery = e.target.value.trim().toLowerCase();
+  state.produkMasterPage = 1;
   renderProdukMasterGrid();
 });
 
