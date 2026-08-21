@@ -95,7 +95,7 @@ function drawCountingSheetCopy(doc, startY, header, rows, dcNama, session, secto
     startY: startY + 9,
     margin: { left: 6, right: 6 },
     styles: { fontSize: 11, cellPadding: 2.2, valign: 'middle' },
-    headStyles: { fillColor: [12,70,124], fontSize: 11.5 },
+    headStyles: { fillColor: [255,255,255], fontSize: 11.5 },
     columnStyles: {
       0: { cellWidth: 26 },
       1: { cellWidth: 22, halign: 'center' },
