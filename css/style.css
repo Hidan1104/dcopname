@@ -1,4 +1,4 @@
-  :root{
+:root{
     --ink:#1c1c1a;
     --surface-0:#f4f3f0;
     --surface-1:#ffffff;
@@ -245,21 +245,30 @@
   .produk-card .produk-manage-actions{ display:flex; gap:4px; flex-shrink:0; }
 
   .pagination-bar{
-    display:flex; align-items:center; justify-content:center; gap:6px;
-    margin-top:16px; padding:8px 4px; flex-wrap:wrap;
+    display:flex; align-items:center; justify-content:center;
+    margin-top:16px; padding:8px 4px;
+  }
+  /* Semua tombol (First/Prev/nomor/Next/Last) digabung jadi 1 strip grid
+     nyambung -- 1 border luar, garis pembatas antar tombol, bukan
+     tombol-tombol lepas yang ada gap-nya. */
+  .pagination-bar{
+    display:flex; align-items:stretch; width:fit-content; margin:16px auto 0; padding:0;
+    border:1px solid var(--border); border-radius:9px; overflow:hidden;
+    background:var(--surface-1);
   }
   .pagination-bar .pg-btn{
-    min-width:34px; height:34px; padding:0 12px; display:inline-flex;
-    align-items:center; justify-content:center; border-radius:9px;
-    background:transparent; color:var(--muted); border:1px solid var(--border);
-    font-size:12.5px; font-weight:600;
+    min-width:36px; height:36px; padding:0 14px; display:inline-flex;
+    align-items:center; justify-content:center;
+    background:transparent; color:var(--muted); border:none; border-right:1px solid var(--border);
+    font-size:12.5px; font-weight:600; border-radius:0;
   }
+  .pagination-bar .pg-btn:last-child{ border-right:none; }
   .pagination-bar .pg-btn:hover{ background:var(--surface-0); color:var(--ink); }
   .pagination-bar .pg-btn:disabled{ opacity:.4; cursor:not-allowed; }
-  .pg-numbers{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; justify-content:center; }
+  .pg-numbers{ display:flex; align-items:stretch; }
   .pg-num{
-    width:32px; height:32px; border-radius:8px; background:transparent; border:1px solid transparent;
-    color:var(--muted); font-size:13px; font-weight:600;
+    width:36px; height:36px; background:transparent; border:none; border-right:1px solid var(--border);
+    color:var(--muted); font-size:13px; font-weight:600; border-radius:0;
   }
   .pg-num:hover{ background:var(--surface-0); color:var(--ink); }
   .pg-num.active{ background:var(--primary); color:#fff; }
