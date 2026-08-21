@@ -66,8 +66,44 @@ const el = id => document.getElementById(id);
 const show = id => el(id).classList.remove('hidden');
 const hide = id => el(id).classList.add('hidden');
 
-// Dipake tiap kali pindah halaman pagination -- biar user gak nyangkut di
-// posisi scroll bawah (deket tombol pagination), langsung ke-scroll balik
-// ke atas biar liat isi halaman baru dari awal.
+// Dipake tiap kali klik nomor halaman / First / Last -- biar user gak
+// nyangkut di posisi scroll bawah (deket tombol pagination), langsung
+// ke-scroll balik ke atas biar liat isi halaman baru dari awal. SENGAJA
+// gak dipake buat tombol Prev/Next (>>/<<), biar user yang lagi baca urut
+// halaman demi halaman gak "kelempar" ke atas tiap klik.
 const scrollContentToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+// Render + wire pagination bar generic -- dipake bareng buat Dashboard &
+// Master Produk (struktur & behavior-nya identik, cuma beda target ID &
+// callback pindah halamannya doang).
+//   prefix      : awalan ID elemen di HTML (mis. 'produk' -> #produkPagination)
+//   page        : halaman aktif sekarang
+//   totalPages  : total halaman
+//   onGoTo(n)   : callback buat pindah ke halaman n (update state + render ulang)
+function renderPaginationBar({ prefix, page, totalPages, onGoTo }){
+  const bar = el(`${prefix}Pagination`);
+  bar.classList.toggle('hidden', totalPages <= 1);
+  if(totalPages <= 1) return;
+
+  el(`${prefix}PageNumbers`).innerHTML = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .map(n => `<button class="pg-num ${n === page ? 'active' : ''}" data-page="${n}">${n}</button>`)
+    .join('');
+  el(`${prefix}PageNumbers`).querySelectorAll('[data-page]').forEach(btn => {
+    btn.onclick = () => {
+      onGoTo(Number(btn.getAttribute('data-page')));
+      scrollContentToTop(); // klik nomor = loncatan jauh, wajar di-scroll
+    };
+  });
+
+  el(`${prefix}PageFirst`).disabled = page <= 1;
+  el(`${prefix}PagePrev`).disabled = page <= 1;
+  el(`${prefix}PageNext`).disabled = page >= totalPages;
+  el(`${prefix}PageLast`).disabled = page >= totalPages;
+
+  el(`${prefix}PageFirst`).onclick = () => { onGoTo(1); scrollContentToTop(); };
+  el(`${prefix}PageLast`).onclick = () => { onGoTo(totalPages); scrollContentToTop(); };
+  // Prev/Next SENGAJA gak manggil scrollContentToTop() -- sesuai request.
+  el(`${prefix}PagePrev`).onclick = () => onGoTo(Math.max(1, page - 1));
+  el(`${prefix}PageNext`).onclick = () => onGoTo(Math.min(totalPages, page + 1));
+}
 

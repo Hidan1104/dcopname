@@ -178,18 +178,6 @@ el('sectorFilterSelect').addEventListener('change', (e) => {
   renderDashboard();
 });
 
-el('produkPagePrev').onclick = () => {
-  state.dashboardPage -= 1;
-  renderDashboard();
-  scrollContentToTop();
-};
-
-el('produkPageNext').onclick = () => {
-  state.dashboardPage += 1;
-  renderDashboard();
-  scrollContentToTop();
-};
-
 function renderDashboard(){
   // Produk di zona ini (udah discope dari loadProdukForZona), difilter lagi
   // per sector kalau ada filter yang dipilih
@@ -198,7 +186,8 @@ function renderDashboard(){
     : state.produkList;
 
   if(!state.activeSessionId){
-    hide('produkGrid');
+    hide('produkTableWrap');
+    hide('produkPagination');
     hide('emptyZonaMsg');
     el('produkGrid').innerHTML = '';
     show('noSessionMsg');
@@ -208,14 +197,15 @@ function renderDashboard(){
   hide('noSessionMsg');
 
   if(!produkZonaIni.length){
-    hide('produkGrid');
+    hide('produkTableWrap');
+    hide('produkPagination');
     el('produkGrid').innerHTML = '';
     show('emptyZonaMsg');
     el('statChecked').textContent = '0/0';
     return;
   }
   hide('emptyZonaMsg');
-  show('produkGrid');
+  show('produkTableWrap');
 
   const filtered = produkZonaIni.filter(p =>
     !state.searchQuery || p.nama.toLowerCase().includes(state.searchQuery)
@@ -231,32 +221,32 @@ function renderDashboard(){
   );
 
   if(!filtered.length){
-    el('produkGrid').innerHTML = `<div class="empty-state">Gak ada produk yang cocok.</div>`;
+    el('produkGrid').innerHTML = `<tr><td colspan="5" class="empty-state">Gak ada produk yang cocok.</td></tr>`;
   } else {
     el('produkGrid').innerHTML = pageItems.map(p => {
       const e = state.entries[`${p.barcode}|${p.sector_id}`];
       const qty = (e && e.qty_fisik !== null && e.qty_fisik !== undefined) ? e.qty_fisik : null;
+      const scannerNama = getUpdatedByNama(e);
       return `
-        <div class="produk-card">
-          <span class="kategori-tag">${p.kategori || '-'}</span>
-          <div class="nama">${p.nama}</div>
-          <div class="qty-row">
+        <tr>
+          <td><span class="kategori-tag">${p.kategori || '-'}</span></td>
+          <td class="produk-nama">${p.nama}</td>
+          <td class="num">
             <span class="qty ${qty === null ? 'kosong' : ''}">${qty === null ? 'Belum dihitung' : qty}</span>
             ${qty === null ? '' : `<span class="uom">${p.satuan || ''}</span>`}
-          </div>
-          <div class="produk-footer">
-            ${getUpdatedByNama(e) ? `<span class="scanned-by">✓ ${getUpdatedByNama(e)}</span>` : '<span></span>'}
-            <span class="sector-tag">${p.sector_nama}</span>
-          </div>
-        </div>`;
+          </td>
+          <td>${scannerNama ? `<span class="scanned-by">✓ ${scannerNama}</span>` : '-'}</td>
+          <td><span class="sector-tag">${p.sector_nama}</span></td>
+        </tr>`;
     }).join('');
   }
 
-  // Pagination bar -- disembunyiin kalau produknya cuma muat 1 halaman aja
-  el('produkPagination').classList.toggle('hidden', totalPages <= 1);
-  el('produkPageInfo').textContent = `Halaman ${state.dashboardPage} dari ${totalPages}`;
-  el('produkPagePrev').disabled = state.dashboardPage <= 1;
-  el('produkPageNext').disabled = state.dashboardPage >= totalPages;
+  renderPaginationBar({
+    prefix: 'produk',
+    page: state.dashboardPage,
+    totalPages,
+    onGoTo: (n) => { state.dashboardPage = n; renderDashboard(); },
+  });
 
   const checked = produkZonaIni.filter(p => {
     const e = state.entries[`${p.barcode}|${p.sector_id}`];

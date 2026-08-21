@@ -148,9 +148,11 @@
     </div>
     <div class="produk-grid" id="produkMasterGrid"></div>
     <div class="pagination-bar hidden" id="produkMasterPagination">
-      <button class="btn-ghost" id="produkMasterPagePrev"><i class="ti ti-chevron-left"></i></button>
-      <span class="pagination-info" id="produkMasterPageInfo">Halaman 1 dari 1</span>
-      <button class="btn-ghost" id="produkMasterPageNext"><i class="ti ti-chevron-right"></i></button>
+      <button class="pg-btn pg-text" id="produkMasterPageFirst">First</button>
+      <button class="pg-btn" id="produkMasterPagePrev"><i class="ti ti-chevrons-left"></i></button>
+      <div class="pg-numbers" id="produkMasterPageNumbers"></div>
+      <button class="pg-btn" id="produkMasterPageNext"><i class="ti ti-chevrons-right"></i></button>
+      <button class="pg-btn pg-text" id="produkMasterPageLast">Last</button>
     </div>
     <div class="empty-state hidden" id="emptyProdukMasterMsg"><p>Belum ada produk yang terdaftar.</p></div>
   </div>
@@ -302,11 +304,26 @@
         </select>
       </div>
     </div>
-    <div class="produk-grid" id="produkGrid"></div>
+    <div class="produk-table-wrap" id="produkTableWrap">
+      <table class="produk-table">
+        <thead>
+          <tr>
+            <th>Kategori</th>
+            <th>Produk</th>
+            <th class="num">Jumlah</th>
+            <th>Scanner</th>
+            <th>Sector</th>
+          </tr>
+        </thead>
+        <tbody id="produkGrid"></tbody>
+      </table>
+    </div>
     <div class="pagination-bar hidden" id="produkPagination">
-      <button class="btn-ghost" id="produkPagePrev"><i class="ti ti-chevron-left"></i></button>
-      <span class="pagination-info" id="produkPageInfo">Halaman 1 dari 1</span>
-      <button class="btn-ghost" id="produkPageNext"><i class="ti ti-chevron-right"></i></button>
+      <button class="pg-btn pg-text" id="produkPageFirst">First</button>
+      <button class="pg-btn" id="produkPagePrev"><i class="ti ti-chevrons-left"></i></button>
+      <div class="pg-numbers" id="produkPageNumbers"></div>
+      <button class="pg-btn" id="produkPageNext"><i class="ti ti-chevrons-right"></i></button>
+      <button class="pg-btn pg-text" id="produkPageLast">Last</button>
     </div>
     <div class="empty-state hidden" id="noSessionMsg">
       <p>Memuat sesi opname...</p>

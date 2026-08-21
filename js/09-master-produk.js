@@ -78,10 +78,12 @@ function renderProdukMasterGrid(){
     </div>
   `).join('');
 
-  el('produkMasterPagination').classList.toggle('hidden', totalPages <= 1);
-  el('produkMasterPageInfo').textContent = `Halaman ${state.produkMasterPage} dari ${totalPages}`;
-  el('produkMasterPagePrev').disabled = state.produkMasterPage <= 1;
-  el('produkMasterPageNext').disabled = state.produkMasterPage >= totalPages;
+  renderPaginationBar({
+    prefix: 'produkMaster',
+    page: state.produkMasterPage,
+    totalPages,
+    onGoTo: (n) => { state.produkMasterPage = n; renderProdukMasterGrid(); },
+  });
 
   document.querySelectorAll('[data-edit-produk-master]').forEach(btn => {
     btn.onclick = () => {
@@ -93,18 +95,6 @@ function renderProdukMasterGrid(){
     btn.onclick = () => deleteProdukMaster(btn.getAttribute('data-delete-produk-master'));
   });
 }
-
-el('produkMasterPagePrev').onclick = () => {
-  state.produkMasterPage -= 1;
-  renderProdukMasterGrid();
-  scrollContentToTop();
-};
-
-el('produkMasterPageNext').onclick = () => {
-  state.produkMasterPage += 1;
-  renderProdukMasterGrid();
-  scrollContentToTop();
-};
 
 el('produkMasterSearchInput').addEventListener('input', (e) => {
   state.produkMasterSearchQuery = e.target.value.trim().toLowerCase();
