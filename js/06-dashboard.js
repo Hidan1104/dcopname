@@ -181,11 +181,13 @@ el('sectorFilterSelect').addEventListener('change', (e) => {
 el('produkPagePrev').onclick = () => {
   state.dashboardPage -= 1;
   renderDashboard();
+  scrollContentToTop();
 };
 
 el('produkPageNext').onclick = () => {
   state.dashboardPage += 1;
   renderDashboard();
+  scrollContentToTop();
 };
 
 function renderDashboard(){

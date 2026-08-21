@@ -66,3 +66,8 @@ const el = id => document.getElementById(id);
 const show = id => el(id).classList.remove('hidden');
 const hide = id => el(id).classList.add('hidden');
 
+// Dipake tiap kali pindah halaman pagination -- biar user gak nyangkut di
+// posisi scroll bawah (deket tombol pagination), langsung ke-scroll balik
+// ke atas biar liat isi halaman baru dari awal.
+const scrollContentToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+

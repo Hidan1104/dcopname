@@ -97,11 +97,13 @@ function renderProdukMasterGrid(){
 el('produkMasterPagePrev').onclick = () => {
   state.produkMasterPage -= 1;
   renderProdukMasterGrid();
+  scrollContentToTop();
 };
 
 el('produkMasterPageNext').onclick = () => {
   state.produkMasterPage += 1;
   renderProdukMasterGrid();
+  scrollContentToTop();
 };
 
 el('produkMasterSearchInput').addEventListener('input', (e) => {
