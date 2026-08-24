@@ -146,7 +146,21 @@
     <div class="admin-actions">
       <button class="btn-ghost" id="addProdukMasterBtn"><i class="ti ti-plus"></i> Produk Baru</button>
     </div>
-    <div class="produk-grid" id="produkMasterGrid"></div>
+    <div class="produk-table-wrap" id="produkMasterTableWrap">
+      <table class="produk-table">
+        <thead>
+          <tr>
+            <th>Kategori</th>
+            <th>Produk</th>
+            <th>Barcode</th>
+            <th>Kode Produk</th>
+            <th>Satuan</th>
+            <th class="num">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="produkMasterGrid"></tbody>
+      </table>
+    </div>
     <div class="pagination-bar hidden" id="produkMasterPagination">
       <button class="pg-btn pg-text" id="produkMasterPageFirst">First</button>
       <button class="pg-btn" id="produkMasterPagePrev"><i class="ti ti-chevrons-left"></i></button>
@@ -466,7 +480,21 @@
       <button class="btn-ghost" id="addProdukBtn"><i class="ti ti-plus"></i> Produk Baru</button>
     </div>
     <div class="sector-manage-list" id="sectorManageList"></div>
-    <div class="produk-grid" id="manageProdukGrid"></div>
+    <div class="produk-table-wrap" id="manageProdukTableWrap">
+      <table class="produk-table">
+        <thead>
+          <tr>
+            <th>Kategori</th>
+            <th>Produk</th>
+            <th>Barcode</th>
+            <th>Satuan</th>
+            <th>Sector</th>
+            <th class="num">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="manageProdukGrid"></tbody>
+      </table>
+    </div>
     <div class="empty-state hidden" id="emptyManageProdukMsg">
       <p>Belum ada produk yang ke-assign ke sector di zona ini.</p>
     </div>

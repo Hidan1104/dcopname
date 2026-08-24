@@ -1,4 +1,4 @@
-:root{
+  :root{
     --ink:#1c1c1a;
     --surface-0:#f4f3f0;
     --surface-1:#ffffff;
@@ -244,22 +244,18 @@
   .sector-chip .btn-icon-xs.danger:hover{ background:var(--danger-soft); color:var(--danger); }
   .produk-card .produk-manage-actions{ display:flex; gap:4px; flex-shrink:0; }
 
-  .pagination-bar{
-    display:flex; align-items:center; justify-content:center;
-    margin-top:16px; padding:8px 4px;
-  }
   /* Semua tombol (First/Prev/nomor/Next/Last) digabung jadi 1 strip grid
      nyambung -- 1 border luar, garis pembatas antar tombol, bukan
      tombol-tombol lepas yang ada gap-nya. */
   .pagination-bar{
     display:flex; align-items:stretch; width:fit-content; margin:16px auto 0; padding:0;
     border:1px solid var(--border); border-radius:9px; overflow:hidden;
-    background:var(--surface-1);
+    background:#ffffff;
   }
   .pagination-bar .pg-btn{
     min-width:36px; height:36px; padding:0 14px; display:inline-flex;
     align-items:center; justify-content:center;
-    background:transparent; color:var(--muted); border:none; border-right:1px solid var(--border);
+    background:#ffffff; color:var(--muted); border:none; border-right:1px solid var(--border);
     font-size:12.5px; font-weight:600; border-radius:0;
   }
   .pagination-bar .pg-btn:last-child{ border-right:none; }
@@ -267,7 +263,7 @@
   .pagination-bar .pg-btn:disabled{ opacity:.4; cursor:not-allowed; }
   .pg-numbers{ display:flex; align-items:stretch; }
   .pg-num{
-    width:36px; height:36px; background:transparent; border:none; border-right:1px solid var(--border);
+    width:36px; height:36px; background:#ffffff; border:none; border-right:1px solid var(--border);
     color:var(--muted); font-size:13px; font-weight:600; border-radius:0;
   }
   .pg-num:hover{ background:var(--surface-0); color:var(--ink); }
@@ -410,7 +406,8 @@
     background:var(--surface-1); border:1px solid var(--border); border-radius:12px;
     padding:13px 16px; display:flex; align-items:center; gap:14px;
   }
-  .produk-card .kategori-tag{
+  .produk-card .kategori-tag,
+  .produk-table .kategori-tag{
     font-size:10px; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;
     color:var(--muted); flex-shrink:0;
     background:var(--surface-0); padding:3px 8px; border-radius:20px;
@@ -419,20 +416,25 @@
   .produk-card .qty-row{
     display:flex; align-items:baseline; gap:6px; flex-shrink:0; justify-content:flex-end; width:96px;
   }
-  .produk-card .qty{
+  .produk-card .qty,
+  .produk-table .qty{
     font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:18px; color:var(--primary);
   }
-  .produk-card .qty.kosong{
+  .produk-card .qty.kosong,
+  .produk-table .qty.kosong{
     color:var(--muted); font-weight:500; font-size:12px; font-family:'Inter',sans-serif; white-space:nowrap;
   }
-  .produk-card .uom{ font-size:12px; color:var(--muted); }
+  .produk-card .uom,
+  .produk-table .uom{ font-size:12px; color:var(--muted); }
   .produk-card .produk-footer{
     display:flex; align-items:center; gap:10px; flex-shrink:0;
   }
-  .produk-card .scanned-by{
+  .produk-card .scanned-by,
+  .produk-table .scanned-by{
     font-size:10.5px; color:var(--success); font-weight:600; white-space:nowrap;
   }
-  .produk-card .sector-tag{
+  .produk-card .sector-tag,
+  .produk-table .sector-tag{
     font-size:10px; color:var(--muted); background:var(--surface-0);
     padding:2px 8px; border-radius:20px; white-space:nowrap;
   }
@@ -662,26 +664,20 @@
     box-shadow:0 4px 13px rgba(32,50,103,.035); transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
   }
   .produk-card:hover{ border-color:#b9c5f2; box-shadow:0 10px 23px rgba(37,58,139,.09); transform:translateX(3px); }
-  .produk-card .kategori-tag{ color:#52637d; background:#f0f3f9; padding:5px 9px; font-size:9px; }
+  .produk-card .kategori-tag,
+  .produk-table .kategori-tag{ color:#52637d; background:#f0f3f9; padding:5px 9px; font-size:9px; }
   .produk-card .nama{ font-size:14.5px; }
   .produk-card .qty-row{ width:120px; padding:7px 10px; border-radius:10px; background:var(--primary-soft); }
-  .produk-card .qty{ color:var(--primary); font-size:19px; }
-  .produk-card .qty.kosong{ color:#8b98ab; background:transparent; }
-  .produk-card .uom{ color:#657595; }
-  #manageProdukScreen .produk-card .qty-row,
-  #manageProdukMasterScreen .produk-card .qty-row{
-    width:auto; padding:5px 12px;
-  }
-  /* Padding produk-card diperkecil, khusus Master Produk (dashboard counting
-     sekarang pake produk-table, bukan produk-card lagi) */
-  #manageProdukMasterScreen .produk-card{
-    min-height:0; padding:9px 14px;
-  }
-  #manageProdukMasterScreen .produk-grid{
-    gap:7px;
-  }
-  .produk-card .scanned-by{ color:var(--success); padding:4px 8px; border-radius:10px; background:var(--success-soft); }
-  .produk-card .sector-tag{ color:#667693; background:#f0f3f8; padding:4px 8px; }
+  .produk-card .qty,
+  .produk-table .qty{ color:var(--primary); font-size:19px; }
+  .produk-card .qty.kosong,
+  .produk-table .qty.kosong{ color:#8b98ab; background:transparent; }
+  .produk-card .uom,
+  .produk-table .uom{ color:#657595; }
+  .produk-card .scanned-by,
+  .produk-table .scanned-by{ color:var(--success); padding:4px 8px; border-radius:10px; background:var(--success-soft); }
+  .produk-card .sector-tag,
+  .produk-table .sector-tag{ color:#667693; background:#f0f3f8; padding:4px 8px; }
   .footer-bar{
     min-height:64px; padding:12px clamp(18px, 4vw, 42px); border-color:var(--border);
     background:rgba(255,255,255,.9); box-shadow:0 -8px 24px rgba(29,50,105,.06); backdrop-filter:blur(13px);

@@ -245,30 +245,30 @@ function renderManageProdukList(){
   );
 
   if(!produkZonaIni.length){
+    hide('manageProdukTableWrap');
     el('manageProdukGrid').innerHTML = '';
     show('emptyManageProdukMsg');
     return;
   }
   hide('emptyManageProdukMsg');
+  show('manageProdukTableWrap');
 
   if(!filtered.length){
-    el('manageProdukGrid').innerHTML = `<div class="empty-state">Gak ada produk yang cocok.</div>`;
+    el('manageProdukGrid').innerHTML = `<tr><td colspan="6" class="empty-state">Gak ada produk yang cocok.</td></tr>`;
     return;
   }
 
   el('manageProdukGrid').innerHTML = filtered.map(p => `
-    <div class="produk-card">
-      <span class="kategori-tag">${p.kategori || '-'}</span>
-      <div class="nama">${p.nama}</div>
-      <div class="qty-row"><span class="uom">${p.satuan || ''}</span></div>
-      <div class="produk-footer">
-        <span class="scanned-by">${p.barcode}</span>
-        <span class="sector-tag">${p.sector_nama}</span>
-      </div>
-      <div class="produk-manage-actions">
+    <tr>
+      <td><span class="kategori-tag">${p.kategori || '-'}</span></td>
+      <td class="produk-nama">${p.nama}</td>
+      <td>${p.barcode}</td>
+      <td>${p.satuan || '-'}</td>
+      <td><span class="sector-tag">${p.sector_nama}</span></td>
+      <td class="num">
         <button class="btn-icon danger" data-delete-produk="${p.id}" title="Lepas dari sector ini"><i class="ti ti-trash"></i></button>
-      </div>
-    </div>
+      </td>
+    </tr>
   `).join('');
 
   document.querySelectorAll('[data-delete-produk]').forEach(btn => {

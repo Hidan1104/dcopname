@@ -32,12 +32,14 @@ async function loadAndRenderProdukMaster(){
 
 function renderProdukMasterGrid(){
   if(!state.allMasterProduk.length){
+    hide('produkMasterTableWrap');
     el('produkMasterGrid').innerHTML = '';
     el('produkMasterPagination').classList.add('hidden');
     show('emptyProdukMasterMsg');
     return;
   }
   hide('emptyProdukMasterMsg');
+  show('produkMasterTableWrap');
 
   const q = state.produkMasterSearchQuery;
   const filtered = state.allMasterProduk.filter(p =>
@@ -48,7 +50,7 @@ function renderProdukMasterGrid(){
   );
 
   if(!filtered.length){
-    el('produkMasterGrid').innerHTML = `<div class="empty-state">Gak ada produk yang cocok.</div>`;
+    el('produkMasterGrid').innerHTML = `<tr><td colspan="6" class="empty-state">Gak ada produk yang cocok.</td></tr>`;
     el('produkMasterPagination').classList.add('hidden');
     return;
   }
@@ -63,19 +65,17 @@ function renderProdukMasterGrid(){
   );
 
   el('produkMasterGrid').innerHTML = pageItems.map(p => `
-    <div class="produk-card">
-      <span class="kategori-tag">${p.kategori || '-'}</span>
-      <div class="nama">${p.nama}</div>
-      <div class="qty-row"><span class="uom">${p.satuan || ''}</span></div>
-      <div class="produk-footer">
-        <span class="scanned-by">${p.barcode}</span>
-        <span class="sector-tag">${p.kode_produk || '-'}</span>
-      </div>
-      <div class="produk-manage-actions">
+    <tr>
+      <td><span class="kategori-tag">${p.kategori || '-'}</span></td>
+      <td class="produk-nama">${p.nama}</td>
+      <td>${p.barcode}</td>
+      <td>${p.kode_produk || '-'}</td>
+      <td>${p.satuan || '-'}</td>
+      <td class="num">
         <button class="btn-icon" data-edit-produk-master="${p.barcode}" title="Edit"><i class="ti ti-edit"></i></button>
         <button class="btn-icon danger" data-delete-produk-master="${p.barcode}" title="Hapus produk"><i class="ti ti-trash"></i></button>
-      </div>
-    </div>
+      </td>
+    </tr>
   `).join('');
 
   renderPaginationBar({
