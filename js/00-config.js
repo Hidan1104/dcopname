@@ -63,8 +63,27 @@ function formatTanggal(t){
 }
 
 const el = id => document.getElementById(id);
-const show = id => el(id).classList.remove('hidden');
-const hide = id => el(id).classList.add('hidden');
+
+// show/hide biasa, TAPI kalau elemennya itu modal-overlay, sekalian
+// kunci/buka scroll di body -- biar background di belakang modal gak
+// ikut ke-scroll pas modal lagi kebuka. Berlaku otomatis ke SEMUA modal
+// (DC, Zona, Sector, Produk, Sesi, Hapus, Export, dll) tanpa perlu
+// nyentuh kode di tiap modal satu-satu.
+const show = id => {
+  const target = el(id);
+  target.classList.remove('hidden');
+  if(target.classList.contains('modal-overlay')) document.body.classList.add('modal-open');
+};
+const hide = id => {
+  const target = el(id);
+  target.classList.add('hidden');
+  if(target.classList.contains('modal-overlay')){
+    // Cuma lepas kunci scroll kalau BENER-BENER gak ada modal-overlay laen
+    // yang masih kebuka (jaga-jaga kalau suatu saat ada modal numpuk).
+    const masihAdaModalKebuka = document.querySelectorAll('.modal-overlay:not(.hidden)').length > 0;
+    if(!masihAdaModalKebuka) document.body.classList.remove('modal-open');
+  }
+};
 
 // Dipake tiap kali klik nomor halaman / First / Last -- biar user gak
 // nyangkut di posisi scroll bawah (deket tombol pagination), langsung

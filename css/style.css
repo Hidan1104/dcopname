@@ -23,6 +23,9 @@
     color:var(--ink);
     font-family:'Inter',system-ui,sans-serif;
   }
+  /* Kunci scroll background pas ada modal kebuka -- class ini ditoggle
+     otomatis lewat show()/hide() di 00-config.js */
+  body.modal-open{ overflow:hidden; }
   button{ font-family:'Inter',sans-serif; border:none; cursor:pointer; }
   input{ font-family:'Inter',sans-serif; }
   .hidden{ display:none !important; }
