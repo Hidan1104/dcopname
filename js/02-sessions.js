@@ -53,10 +53,10 @@ async function loadDcs(){
 }
 
 function renderSelector(){
-  el('userChip').innerHTML = `<i class="ti ti-user-circle"></i> ${state.profile?.nama || state.session?.user?.email || 'User'} ${state.profile?.admin === 'admin' ? '· Admin' : ''}`;
+  el('userChip').innerHTML = `<i class="ti ti-user-circle"></i> ${state.profile?.nama || state.session?.user?.email || 'User'} ${state.profile?.role === 'admin' ? '· Admin' : ''}`;
 
   let dcsToShow = state.dcs;
-  if(state.profile?.admin !== 'admin'){
+  if(state.profile?.role !== 'admin'){
     dcsToShow = state.dcs.filter(d => d.id === state.profile?.dc_id);
     el('selectorHint').textContent = 'DC yang bisa lo akses:';
   }
