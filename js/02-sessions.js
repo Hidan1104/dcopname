@@ -2,8 +2,8 @@
 // MAIN MENU (abis login)
 // =========================================================
 function renderMainMenu(){
-  el('userChip9').innerHTML = `<i class="ti ti-user-circle"></i> ${state.profile?.nama || state.session?.user?.email || 'User'} ${state.profile?.admin === 'admin' ? '· Admin' : ''}`;
-  el('menuMasterBtn').classList.toggle('hidden', state.profile?.admin !== 'admin');
+  el('userChip9').innerHTML = `<i class="ti ti-user-circle"></i> ${state.profile?.nama || state.session?.user?.email || 'User'} ${state.profile?.role === 'admin' ? '· Admin' : ''}`;
+  el('menuMasterBtn').classList.toggle('hidden', state.profile?.role !== 'admin');
 }
 
 el('menuStockOpnameBtn').onclick = () => {
